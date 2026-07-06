@@ -17,7 +17,6 @@
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="preload" as="font" type="font/woff2" href="assets/fonts/syncopate-v24-latin-regular.woff2" crossorigin>
 <link rel="preload" as="font" type="font/woff2" href="assets/fonts/stix-two-text-v18-latin-500italic.woff2" crossorigin>
-<link rel="preload" as="image" imagesrcset="assets/img/hero-hand-sm.jpg 640w, assets/img/hero-hand.jpg 1200w" imagesizes="(max-width: 900px) 70vw, 40vw">
 <link rel="stylesheet" href="css/style.css">
 <script type="module" src="js/app.js"></script>
 </head>
@@ -47,9 +46,11 @@
   <div class="overlay__box panel">
     <h2>Hands as instruments</h2>
     <p class="small">With your permission this page tracks your hands and face
-    <strong>locally, in your browser</strong>: open palm steers, closed fist jumps sections,
-    your face becomes a constellation in the starfield and the moon follows your gaze.
-    No frame is stored, sent, or kept. Turn it off any time with the same button.</p>
+    <strong>locally, in your browser</strong>: keep your hand open and the bionic hand
+    mirrors your fingers in real time; close your fist to fly, up and down to scroll,
+    left and right to jump sections. Your face becomes a constellation in the starfield
+    and your gaze steers the drift. No frame is stored, sent, or kept.
+    Turn it off any time with the same button.</p>
     <div class="actions">
       <button class="btn btn--solid" id="cam-enable">Enable camera</button>
       <button class="btn" id="cam-decline">Not now</button>
@@ -97,12 +98,6 @@
           <a class="btn" href="#moon">Solve the moon</a>
         </div>
       </div>
-      <figure class="hero-hand" aria-hidden="false">
-        <img srcset="assets/img/hero-hand-sm.jpg 640w, assets/img/hero-hand.jpg 1200w"
-             sizes="(max-width: 900px) 70vw, 40vw" src="assets/img/hero-hand.jpg"
-             alt="Hyperreal bionic hand reaching upward, teal light seeping between titanium plates"
-             width="1200" height="1600" fetchpriority="high">
-      </figure>
     </div>
   </section>
 
@@ -126,9 +121,6 @@
 
   <!-- PAYLOAD -->
   <section class="section" id="payload" aria-label="Projects">
-    <img class="payload-fist" src="assets/img/fist.jpg" srcset="assets/img/fist-sm.jpg 520w, assets/img/fist.jpg 1000w"
-         sizes="(max-width: 900px) 60vw, 34vw" loading="lazy"
-         alt="Bionic fist holding light, teal rays escaping between the fingers" width="1000" height="1000">
     <div class="section__inner">
       <h2 class="display display--section">Payload<br>manifest</h2>
       <p class="lead sub-lead">Three items cleared for exhibition. Everything else stays in the hold.</p>

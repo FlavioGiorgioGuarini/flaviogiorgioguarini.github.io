@@ -9,6 +9,9 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const state = {
   px: 0, py: 0,           // pointer parallax, -1..1
   face: null,             // { rx, ry } from vision
+  gaze: null,             // { x, y } iris gaze, -1..1
+  hand: null,             // Hand3D cockpit hand
+  handLive: false,        // true while a real hand is tracked this frame
   scene: null,
   vision: null,
   bot: null,
@@ -105,15 +108,16 @@ $('#cam-enable').addEventListener('click', async () => {
     const mod = await import('./vision.js');
     state.vision = await mod.startVision({
       onHand: onHand,
-      onFace: (pts, rot) => {
+      onFace: (pts, rot, gaze) => {
         state.scene?.setFacePoints(pts);
         state.face = rot;
+        state.gaze = gaze;
         $('#moon-telemetry').textContent = 'LUNAR LOCK · FACE ACQUIRED';
       },
       onStatus: (msg) => { $('#game-status').textContent = msg; },
     });
     camCtl.setAttribute('aria-pressed', 'true');
-    ghost.classList.add('on');
+    ghost.classList.remove('on'); // the 3D hand replaces the ghost cursor
   } catch (err) {
     $('#moon-telemetry').textContent = 'LUNAR LOCK · CAMERA UNAVAILABLE';
     camCtl.setAttribute('aria-pressed', 'false');
@@ -122,21 +126,19 @@ $('#cam-enable').addEventListener('click', async () => {
   }
 });
 
-/* gesture navigation: open palm steers, fist jumps */
+/* VR-style gestures: an OPEN hand only mirrors you (the cockpit hand
+   replicates fingers and pose, the page holds still); a CLOSED fist
+   flies the ship: up/down scrolls, left/right jumps sections. */
 const SECTIONS = [...document.querySelectorAll('main .section')];
 let lastJump = 0;
 function onHand(h) {
-  // h: { x, y (0..1 screen), open (bool), dx, dy (velocity, screens/s) }
-  state.ghost.tx = h.x * innerWidth;
-  state.ghost.ty = h.y * innerHeight;
-  ghost.style.stroke = h.open ? '#59e8d5' : '#c99b66';
+  state.handLive = !!h;
+  if (!h) return;
+  state.hand?.setPose(h);
   const now = performance.now();
-  if (h.open) {
-    if (Math.abs(h.dy) > 0.12) scrollBy({ top: -h.dy * innerHeight * 0.09, behavior: 'instant' });
-    if (Math.abs(h.dx) > 1.1 && now - lastJump > 900) { lastJump = now; jumpSection(h.dx > 0 ? 1 : -1); }
-  } else {
-    if (Math.abs(h.dy) > 0.9 && now - lastJump > 900) { lastJump = now; jumpSection(h.dy > 0 ? -1 : 1); }
-    if (Math.abs(h.dx) > 0.9) dispatchEvent(new CustomEvent('fist-move', { detail: { dir: h.dx > 0 ? 1 : -1 } }));
+  if (!h.open) {
+    if (Math.abs(h.dy) > 0.1) scrollBy({ top: h.dy * innerHeight * 0.14, behavior: 'instant' });
+    if (Math.abs(h.dx) > 1.0 && now - lastJump > 900) { lastJump = now; jumpSection(h.dx > 0 ? 1 : -1); }
   }
 }
 function currentSection() {
@@ -273,9 +275,12 @@ $('#bot-toggle').addEventListener('click', async () => {
 import('./bot.js').then((m) => { if (!state.bot) state.bot = m.startBot({ canvas: $('#bot-canvas'), panelClosed: true }); });
 
 /* ---------- scene + main loop ---------- */
-import('./scene.js').then(({ DeepField }) => {
+import('./scene.js').then(async ({ DeepField }) => {
   state.scene = new DeepField($('#stage'), { reduced });
   addEventListener('resize', () => state.scene.resize(), { passive: true });
+  const { Hand3D } = await import('./hand3d.js');
+  state.hand = new Hand3D(state.scene.camera);
+  state.scene.scene.add(state.scene.camera); // camera children need the camera in-graph
 });
 
 const docH = () => document.documentElement.scrollHeight - innerHeight;
@@ -284,9 +289,16 @@ function loop(now) {
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
   state.audio.frame();
+  // iris gaze steers the drift when a face is tracked; pointer otherwise
+  const gx = state.gaze ? state.gaze.x : state.px;
+  const gy = state.gaze ? state.gaze.y : state.py;
   if (state.scene) {
     state.scene.setScroll(docH() > 0 ? scrollY / docH() : 0);
-    state.scene.frame(dt, state.audio, { px: state.px, py: state.py, face: state.face });
+    state.scene.frame(dt, state.audio, { px: gx, py: gy, face: state.face });
+  }
+  if (state.hand) {
+    if (!state.handLive) state.hand.setIdle(now / 1000, state.px, state.py);
+    state.hand.update(dt, state.audio.level);
   }
   // ghost hand easing
   state.ghost.x += (state.ghost.tx - state.ghost.x) * 0.16;

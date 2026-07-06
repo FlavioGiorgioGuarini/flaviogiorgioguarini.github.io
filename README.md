@@ -9,10 +9,12 @@ no build step, no CDN at runtime, no trackers.
   and analysed live with the Web Audio API. Stars, dust and nebulae move with the music.
 - **Deep-field scene** — Three.js (self-hosted, pinned 0.182): shader starfield,
   audio-reactive dust, procedural displacement moon.
-- **Vision tiers** — optional on-device MediaPipe hand + face tracking (self-hosted
-  WASM, lazy-loaded, camera opt-in). Open palm steers, fist jumps sections, your
-  face becomes a constellation in the starfield. No camera → a ghost hand follows
-  the pointer; keyboard and touch always have full parity.
+- **Cockpit hand** — a real-time bionic 3D hand (joints + bones driven directly by
+  MediaPipe's 21 world landmarks, VR-style, no rig). Open hand: it mirrors your
+  fingers and pose, the page holds still. Closed fist: you fly — up/down scrolls,
+  left/right jumps sections. Without a camera it idles cinematically and follows
+  the pointer. Face joins the starfield as a constellation; iris gaze steers the
+  drift. All on-device (self-hosted WASM, lazy, opt-in); keyboard/touch parity.
 - **CAERUS** — original TARS-inspired slab companion. Voice in/out via the Web
   Speech API, knowledge fully on-device; no external AI endpoint, no key to leak.
 - **Past Lives Arcade** — 8-bit map of the journey. One log matters to the moon.

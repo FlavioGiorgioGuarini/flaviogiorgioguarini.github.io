@@ -39,8 +39,8 @@ export async function startVision({ onHand, onFace, onStatus }) {
   const hands = await make(HandLandmarker, 'vendor/mediapipe/hand_landmarker.task', { numHands: 1 }, 'hands');
   const face = await make(FaceLandmarker, 'vendor/mediapipe/face_landmarker.task', { numFaces: 1 }, 'face');
   if (!hands && !face) { stream.getTracks().forEach((t) => t.stop()); throw new Error('vision unavailable'); }
-  onStatus?.(face ? 'Full tracking online: hands steer, your face joins the stars'
-                  : 'Hand tracking online: open palm steers, fist jumps');
+  onStatus?.(face ? 'Tracking online: open hand mirrors you, fist flies the ship, your face joins the stars'
+                  : 'Hand tracking online: open to mirror, fist to fly');
 
   let raf = 0, lastTs = -1, prev = null, frame = 0, stopped = false;
   const facePts = new Float32Array(156 * 3);
@@ -57,7 +57,8 @@ export async function startVision({ onHand, onFace, onStatus }) {
     if (hands) {
       const res = hands.detectForVideo(video, ts);
       const lm = res.landmarks?.[0];
-      if (lm) {
+      const world = res.worldLandmarks?.[0];
+      if (lm && world) {
         // palm center from wrist + finger bases; mirrored for natural control
         const ids = [0, 5, 9, 13, 17];
         let cx = 0, cy = 0;
@@ -76,9 +77,10 @@ export async function startVision({ onHand, onFace, onStatus }) {
           dy = (cy - prev.y) / dt;
         }
         prev = { x: cx, y: cy, t: now };
-        onHand?.({ x: cx, y: cy, open, dx, dy });
+        onHand?.({ x: cx, y: cy, open, dx, dy, world });
       } else {
         prev = null;
+        onHand?.(null); // hand lost: caller returns the cockpit hand to idle
       }
     }
 
@@ -91,7 +93,17 @@ export async function startVision({ onHand, onFace, onStatus }) {
           facePts[i * 3] = p.x; facePts[i * 3 + 1] = p.y; facePts[i * 3 + 2] = p.z;
         }
         const nose = lm[1];
-        onFace?.(facePts, { rx: (0.5 - nose.x) * 2, ry: (nose.y - 0.5) * 2 });
+        // gaze from the iris landmarks (468+): where the eyes point, -1..1
+        let gaze = null;
+        if (lm.length > 477) {
+          const gx = (e, iL, iR) => (e.x - iL.x) / Math.max(iR.x - iL.x, 1e-4) * 2 - 1;
+          const gy = (e, top, bot) => (e.y - top.y) / Math.max(bot.y - top.y, 1e-4) * 2 - 1;
+          gaze = {
+            x: -((gx(lm[468], lm[33], lm[133]) + gx(lm[473], lm[362], lm[263])) / 2),
+            y: (gy(lm[468], lm[159], lm[145]) + gy(lm[473], lm[386], lm[374])) / 2,
+          };
+        }
+        onFace?.(facePts, { rx: (0.5 - nose.x) * 2, ry: (nose.y - 0.5) * 2 }, gaze);
       }
     }
   }

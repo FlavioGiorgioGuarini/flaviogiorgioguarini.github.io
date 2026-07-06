@@ -500,36 +500,13 @@ a:hover { color: var(--teal-bright); }
   gap: clamp(20px, 4vw, 60px);
   align-items: center;
 }
-.hero-hand { margin: 0; position: relative; }
-.hero-hand img {
-  width: min(52vh, 100%);
-  margin-inline: auto;
-  /* the photo is lit on pure black: screen-blend melts its frame into space,
-     the radial mask dissolves every edge of the rectangle */
-  mix-blend-mode: screen;
-  -webkit-mask-image: radial-gradient(85% 82% at 50% 44%, #000 50%, transparent 76%);
-  mask-image: radial-gradient(85% 82% at 50% 44%, #000 50%, transparent 76%);
-}
 .hero-serif { margin-top: 26px; }
 .hero-lead { margin-top: 22px; }
 .hero-actions { margin-top: 38px; display: flex; gap: 14px; flex-wrap: wrap; }
 
-.payload-fist {
-  position: absolute; right: -4%; top: 50%;
-  transform: translateY(-50%);
-  width: min(34vw, 480px);
-  opacity: 0.5; z-index: 1; pointer-events: none;
-  -webkit-mask-image: radial-gradient(closest-side, #000 40%, transparent);
-  mask-image: radial-gradient(closest-side, #000 40%, transparent);
-}
-@media (max-width: 900px) {
-  .payload-fist { position: static; transform: none; width: min(60vw, 320px); margin-inline: auto; opacity: 0.75; }
-}
-
 .split--top { align-items: start; }
 .sticky-head { position: sticky; top: 13vh; align-self: start; }
 .readout { margin-top: 44px; max-width: 680px; }
-.payload-fist { mix-blend-mode: screen; }
 
 .orbit-wrap { position: relative; aspect-ratio: 1 / 1; min-width: 0; }
 #orbit { width: 100%; height: 100%; cursor: crosshair; }
@@ -587,8 +564,6 @@ a:hover { color: var(--teal-bright); }
 
 @media (max-width: 900px) {
   .hero-grid { grid-template-columns: 1fr; gap: 8px; }
-  .hero-hand { order: -1; }
-  .hero-hand img { width: min(26vh, 52%); }
   .sticky-head { position: static; }
   .section { padding-top: 96px; padding-bottom: 96px; }
 }

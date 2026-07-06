@@ -75,12 +75,6 @@ export function startGame(canvas) {
     b.addEventListener('pointercancel', off);
   });
 
-  /* closed-fist lateral gesture steers the ship while the arcade is on screen */
-  addEventListener('fist-move', (e) => {
-    if (!inView()) return;
-    player.vx += e.detail.dir * 130;
-  });
-
   function px(mx, my, map, scale, colors) {
     for (let y = 0; y < map.length; y++) {
       for (let x = 0; x < map[y].length; x++) {

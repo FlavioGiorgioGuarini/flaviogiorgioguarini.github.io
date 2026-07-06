@@ -207,7 +207,7 @@ export class DeepField {
     const key = new THREE.DirectionalLight(0xf2ede2, 2.6);
     key.position.set(-30, 10, 18);
     this.scene.add(key);
-    const rim = new THREE.DirectionalLight(0x59e8d5, 1.1);
+    const rim = new THREE.DirectionalLight(0x59e8d5, 0.55);
     rim.position.set(26, -8, -20);
     this.scene.add(rim);
     this.scene.add(new THREE.AmbientLight(0x14161c, 2.2));
