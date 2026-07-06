@@ -2,7 +2,8 @@
    Fly the ship into a beacon to dock and read its log.
    Pure canvas 2D, no assets; sprites are bitmaps drawn here. */
 
-import { ZONES } from './data.js';
+import { ZONE_GEO } from './data.js';
+import { t } from './i18n.js';
 
 const T = 32, W = 24, H = 16; // tile grid → 768x512 backing store
 
@@ -44,10 +45,11 @@ export function startGame(canvas) {
     bgc.fillRect(0, y, bg.width, 1);
   }
 
-  const beacons = ZONES.map((z) => ({ ...z, px: z.x * T + T / 2, py: z.y * T + T / 2, seen: false }));
+  const beacons = ZONE_GEO.map((z) => ({ ...z, px: z.x * T + T / 2, py: z.y * T + T / 2, seen: false }));
+  const zname = (id) => t(`zones.${id}.name`);
   const player = { x: 1.5 * T, y: 13.5 * T, vx: 0, vy: 0 };
   const keys = new Set();
-  let docked = null, t = 0, last = performance.now();
+  let docked = null, gt = 0, last = performance.now();
 
   const KEYMAP = {
     ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down',
@@ -88,7 +90,7 @@ export function startGame(canvas) {
   }
 
   function drawBeacon(b) {
-    const blink = (Math.sin(t * 3 + b.px) + 1) / 2;
+    const blink = (Math.sin(gt * 3 + b.px) + 1) / 2;
     // pylon
     g.fillStyle = '#20242e';
     g.fillRect(b.px - 3, b.py - 2, 6, 14);
@@ -111,7 +113,7 @@ export function startGame(canvas) {
     g.fillStyle = d < 120 ? '#e9ecea' : '#6d7683';
     g.font = '8px ui-monospace, Menlo, monospace';
     g.textAlign = 'center';
-    g.fillText(b.name.toUpperCase(), b.px, b.py + 24);
+    g.fillText(zname(b.id).toUpperCase(), b.px, b.py + 24);
   }
 
   function loop(now) {
@@ -119,7 +121,7 @@ export function startGame(canvas) {
     if (!inView()) { last = now; return; }
     const dt = Math.min((now - last) / 1000, 0.05);
     last = now;
-    t += dt;
+    gt += dt;
 
     const acc = 620, damp = 0.86, max = 220;
     if (keys.has('up')) player.vy -= acc * dt;
@@ -139,17 +141,17 @@ export function startGame(canvas) {
     if (near && docked !== near) {
       docked = near; near.seen = true;
       cardTag.textContent = `LOG · ${near.id.toUpperCase()}`;
-      cardName.textContent = near.name;
-      cardStory.textContent = near.story;
+      cardName.textContent = zname(near.id);
+      cardStory.textContent = t(`zones.${near.id}.story`);
       card.hidden = false;
-      status.textContent = `Docked at ${near.name} · fly away to release`;
+      status.textContent = `${zname(near.id)} · ${t('ui.gameDocked')}`;
     } else if (!near && docked) {
       docked = null;
       card.hidden = true;
       const seen = beacons.filter((b) => b.seen).length;
       status.textContent = seen === beacons.length
-        ? 'Every log read. One of them holds the moon date.'
-        : `Beacons logged: ${seen}/${beacons.length} · arrows / WASD to fly`;
+        ? t('ui.gameAll')
+        : `${t('ui.gameCount')}: ${seen}/${beacons.length}`;
     }
 
     /* draw */

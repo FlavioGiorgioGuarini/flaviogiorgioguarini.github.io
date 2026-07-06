@@ -1,13 +1,22 @@
-/* On-device vision: MediaPipe hands + face, self-hosted, lazy-loaded.
-   Nothing is recorded; frames never leave the GPU/browser.
-   Tiers degrade gracefully: GPU → CPU → hands-only → caller catches to tier 3. */
+/* On-device hand tracking: MediaPipe HandLandmarker only (face/eye removed
+   on purpose — one model = lower latency, higher stability, all frames for
+   the hand). Nothing is recorded; frames never leave the browser.
+   Emits: onHand({x, y, open, dx, dy, world, gesture}) or onHand(null). */
 
-import { FilesetResolver, HandLandmarker, FaceLandmarker }
-  from '../vendor/mediapipe/vision_bundle.mjs';
+import { FilesetResolver, HandLandmarker } from '../vendor/mediapipe/vision_bundle.mjs';
 
 const WASM_DIR = 'vendor/mediapipe/wasm';
 
-export async function startVision({ onHand, onFace, onStatus }) {
+/* per-finger "extended" test: tip reach vs pip reach from the wrist */
+function fingerStates(lm) {
+  const d = (a, b) => Math.hypot(lm[a].x - lm[b].x, lm[a].y - lm[b].y);
+  const ext = (tip, pip) => d(tip, 0) / Math.max(d(pip, 0), 1e-4) > 1.18;
+  return {
+    index: ext(8, 6), middle: ext(12, 10), ring: ext(16, 14), pinky: ext(20, 18),
+  };
+}
+
+export async function startVision({ onHand, onStatus }) {
   onStatus?.('Requesting camera…');
   const stream = await navigator.mediaDevices.getUserMedia({
     video: { width: 640, height: 480, facingMode: 'user' },
@@ -20,30 +29,23 @@ export async function startVision({ onHand, onFace, onStatus }) {
   await video.play();
 
   const fileset = await FilesetResolver.forVisionTasks(WASM_DIR);
-
-  async function make(Ctor, modelPath, opts, label) {
-    for (const delegate of ['GPU', 'CPU']) {
-      try {
-        return await Ctor.createFromOptions(fileset, {
-          baseOptions: { modelAssetPath: modelPath, delegate },
-          runningMode: 'VIDEO',
-          ...opts,
-        });
-      } catch (e) {
-        onStatus?.(`${label}: ${delegate} unavailable, retrying…`);
-      }
-    }
-    return null;
+  let hands = null;
+  for (const delegate of ['GPU', 'CPU']) {
+    try {
+      hands = await HandLandmarker.createFromOptions(fileset, {
+        baseOptions: { modelAssetPath: 'vendor/mediapipe/hand_landmarker.task', delegate },
+        runningMode: 'VIDEO',
+        numHands: 1,
+      });
+      break;
+    } catch { onStatus?.(`hands: ${delegate} unavailable, retrying…`); }
   }
+  if (!hands) { stream.getTracks().forEach((t) => t.stop()); throw new Error('vision unavailable'); }
+  onStatus?.('Hand online · open mirrors you, fist flies the ship');
 
-  const hands = await make(HandLandmarker, 'vendor/mediapipe/hand_landmarker.task', { numHands: 1 }, 'hands');
-  const face = await make(FaceLandmarker, 'vendor/mediapipe/face_landmarker.task', { numFaces: 1 }, 'face');
-  if (!hands && !face) { stream.getTracks().forEach((t) => t.stop()); throw new Error('vision unavailable'); }
-  onStatus?.(face ? 'Tracking online: open hand mirrors you, fist flies the ship, your face joins the stars'
-                  : 'Hand tracking online: open to mirror, fist to fly');
-
-  let raf = 0, lastTs = -1, prev = null, frame = 0, stopped = false;
-  const facePts = new Float32Array(156 * 3);
+  let raf = 0, lastTs = -1, prev = null, stopped = false;
+  let open = true;            // hysteresis state
+  let sx = 0, sy = 0, seeded = false; // smoothed palm position
 
   function tick() {
     if (stopped) return;
@@ -52,60 +54,46 @@ export async function startVision({ onHand, onFace, onStatus }) {
     const ts = performance.now();
     if (ts === lastTs) return;
     lastTs = ts;
-    frame++;
 
-    if (hands) {
-      const res = hands.detectForVideo(video, ts);
-      const lm = res.landmarks?.[0];
-      const world = res.worldLandmarks?.[0];
-      if (lm && world) {
-        // palm center from wrist + finger bases; mirrored for natural control
-        const ids = [0, 5, 9, 13, 17];
-        let cx = 0, cy = 0;
-        ids.forEach((i) => { cx += lm[i].x; cy += lm[i].y; });
-        cx = 1 - cx / ids.length; cy /= ids.length;
-        // openness: fingertip reach vs knuckle reach from the wrist
-        const d = (a, b) => Math.hypot(lm[a].x - lm[b].x, lm[a].y - lm[b].y);
-        const reach = (d(8, 0) + d(12, 0) + d(16, 0) + d(20, 0)) /
-                      (d(5, 0) + d(9, 0) + d(13, 0) + d(17, 0));
-        const open = reach > 1.32;
-        const now = ts / 1000;
-        let dx = 0, dy = 0;
-        if (prev) {
-          const dt = Math.max(now - prev.t, 0.016);
-          dx = (cx - prev.x) / dt;
-          dy = (cy - prev.y) / dt;
-        }
-        prev = { x: cx, y: cy, t: now };
-        onHand?.({ x: cx, y: cy, open, dx, dy, world });
-      } else {
-        prev = null;
-        onHand?.(null); // hand lost: caller returns the cockpit hand to idle
-      }
-    }
+    const res = hands.detectForVideo(video, ts);
+    const lm = res.landmarks?.[0];
+    const world = res.worldLandmarks?.[0];
+    if (!lm || !world) { prev = null; seeded = false; onHand?.(null); return; }
 
-    if (face && frame % 2 === 0) {
-      const res = face.detectForVideo(video, ts);
-      const lm = res.faceLandmarks?.[0];
-      if (lm) {
-        for (let i = 0; i < 156; i++) {
-          const p = lm[i * 3]; // subsample the 468-point mesh
-          facePts[i * 3] = p.x; facePts[i * 3 + 1] = p.y; facePts[i * 3 + 2] = p.z;
-        }
-        const nose = lm[1];
-        // gaze from the iris landmarks (468+): where the eyes point, -1..1
-        let gaze = null;
-        if (lm.length > 477) {
-          const gx = (e, iL, iR) => (e.x - iL.x) / Math.max(iR.x - iL.x, 1e-4) * 2 - 1;
-          const gy = (e, top, bot) => (e.y - top.y) / Math.max(bot.y - top.y, 1e-4) * 2 - 1;
-          gaze = {
-            x: -((gx(lm[468], lm[33], lm[133]) + gx(lm[473], lm[362], lm[263])) / 2),
-            y: (gy(lm[468], lm[159], lm[145]) + gy(lm[473], lm[386], lm[374])) / 2,
-          };
-        }
-        onFace?.(facePts, { rx: (0.5 - nose.x) * 2, ry: (nose.y - 0.5) * 2 }, gaze);
-      }
+    // palm center (wrist + finger bases), mirrored for natural control
+    const ids = [0, 5, 9, 13, 17];
+    let cx = 0, cy = 0;
+    ids.forEach((i) => { cx += lm[i].x; cy += lm[i].y; });
+    cx = 1 - cx / ids.length; cy /= ids.length;
+    // adaptive smoothing: heavier when slow (steady aim), lighter when fast (low lag)
+    if (!seeded) { sx = cx; sy = cy; seeded = true; }
+    const speed = Math.hypot(cx - sx, cy - sy);
+    const k = Math.min(0.2 + speed * 6, 0.85);
+    sx += (cx - sx) * k;
+    sy += (cy - sy) * k;
+
+    // openness with hysteresis so the fist never flickers mid-gesture
+    const d = (a, b) => Math.hypot(lm[a].x - lm[b].x, lm[a].y - lm[b].y);
+    const reach = (d(8, 0) + d(12, 0) + d(16, 0) + d(20, 0)) /
+                  (d(5, 0) + d(9, 0) + d(13, 0) + d(17, 0));
+    if (open && reach < 1.24) open = false;
+    else if (!open && reach > 1.4) open = true;
+
+    // special gestures, only meaningful on a mostly-closed hand
+    const f = fingerStates(lm);
+    let gesture = null;
+    if (f.index && f.pinky && !f.middle && !f.ring) gesture = 'horns';
+    else if (f.middle && !f.index && !f.ring && !f.pinky) gesture = 'middle';
+
+    const now = ts / 1000;
+    let dx = 0, dy = 0;
+    if (prev) {
+      const dt = Math.max(now - prev.t, 0.016);
+      dx = (sx - prev.x) / dt;
+      dy = (sy - prev.y) / dt;
     }
+    prev = { x: sx, y: sy, t: now };
+    onHand?.({ x: sx, y: sy, open, dx, dy, world, gesture });
   }
   tick();
 
@@ -114,7 +102,7 @@ export async function startVision({ onHand, onFace, onStatus }) {
       stopped = true;
       cancelAnimationFrame(raf);
       stream.getTracks().forEach((t) => t.stop());
-      hands?.close(); face?.close();
+      hands.close();
     },
   };
 }

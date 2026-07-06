@@ -1,7 +1,13 @@
 # flaviogiorgioguarini.github.io
 
-Interstellar-grade portfolio. Static, hand-written, fully self-hosted:
-no build step, no CDN at runtime, no trackers.
+Total-black 3D portfolio. Static, hand-written, fully self-hosted:
+no build step, no CDN at runtime, no trackers, no generated imagery —
+every visual is real-time WebGL/canvas.
+
+**Six languages** (EN·IT·ES·DE·PT·FR): the full experience is localized in
+`js/i18n.js`, plus a spoken audio-description of the site per language
+(utility button in the top bar). Hand gestures double as an accessibility
+input: the whole site can be explored with one hand.
 
 ## What's inside
 

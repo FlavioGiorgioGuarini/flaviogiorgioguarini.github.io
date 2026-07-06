@@ -4,6 +4,7 @@
    (Client-side checks deter bots; FormSubmit adds its own server-side line.) */
 
 import { CTF, CONTACT } from './data.js';
+import { t } from './i18n.js';
 
 const enc = new TextEncoder();
 async function sha256hex(s) {
@@ -39,7 +40,7 @@ export function initCTF() {
     while (attempts.length && now - attempts[0] > 60000) attempts.shift();
     if (attempts.length >= 6) {
       field.classList.add('invalid');
-      errEl.textContent = 'Too many attempts. The moon rewards patience: wait a minute.';
+      errEl.textContent = t('ctf.lock');
       return;
     }
     attempts.push(now);
@@ -48,7 +49,7 @@ export function initCTF() {
     const ok = norm && (await sha256hex(norm)) === CTF.hashHex;
     if (!ok) {
       field.classList.add('invalid');
-      errEl.textContent = 'Not that date. The arcade keeps a landing log.';
+      errEl.textContent = t('ctf.err');
       answerEl.value = '';
       return;
     }
@@ -72,13 +73,13 @@ export function initCTF() {
 
     if (honey || Date.now() - revealedAt < 3000) return; // bot signatures
     if (!name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-      winStatus.textContent = 'A name and a valid email, and the coffee is yours.';
+      winStatus.textContent = t('ctf.invalid');
       return;
     }
 
     sending = true;
     sendBtn.disabled = true;
-    winStatus.textContent = 'Transmitting…';
+    winStatus.textContent = t('ctf.sending');
     try {
       const res = await fetch(CTF.endpoint, {
         method: 'POST',
@@ -95,7 +96,7 @@ export function initCTF() {
       winForm.hidden = true;
       winDone.hidden = false;
     } catch {
-      winStatus.textContent = `Transmission failed. Email me directly: ${CONTACT.email}`;
+      winStatus.textContent = t('ctf.fail') + CONTACT.email;
       sendBtn.disabled = false;
       sending = false;
     }

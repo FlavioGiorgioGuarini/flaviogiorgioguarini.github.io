@@ -71,13 +71,67 @@ export class DeepField {
     this.parallax = { x: 0, y: 0 };
     this.shake = 0;
 
+    this.warp = 0; // horns-gesture warp drive, 0..1
     this._buildStars();
     this._buildDust();
     this._buildNebulae();
     this._buildMoon();
-    this._buildFaceCloud();
+    this._buildRibbon();
+    this._buildSlabs();
     this.resize();
   }
+
+  /* the trajectory: a light path that draws itself as you scroll the journey */
+  _buildRibbon() {
+    const pts = [];
+    for (let i = 0; i < 9; i++) {
+      pts.push(new THREE.Vector3(
+        Math.sin(i * 1.25) * 9 + 2,
+        -14 - i * 3.4,
+        -14 - Math.cos(i * 0.9) * 8,
+      ));
+    }
+    this.ribbonNodes = pts;
+    const curve = new THREE.CatmullRomCurve3(pts);
+    const geo = new THREE.BufferGeometry().setFromPoints(curve.getPoints(160));
+    this.ribbon = new THREE.Line(geo, new THREE.LineBasicMaterial({
+      color: 0x59e8d5, transparent: true, opacity: 0.55,
+    }));
+    this.ribbon.geometry.setDrawRange(0, 0);
+    this.scene.add(this.ribbon);
+    const nodeGeo = new THREE.SphereGeometry(0.22, 10, 10);
+    const nodeMat = new THREE.MeshBasicMaterial({ color: 0x9cfff1, transparent: true, opacity: 0.9 });
+    this.ribbonDots = pts.map((p) => {
+      const m = new THREE.Mesh(nodeGeo, nodeMat);
+      m.position.copy(p);
+      m.visible = false;
+      this.scene.add(m);
+      return m;
+    });
+  }
+
+  /* payload bay: three slow slabs, edges lit, breathing with the mids */
+  _buildSlabs() {
+    this.slabs = new THREE.Group();
+    const geo = new THREE.BoxGeometry(3.0, 4.2, 0.16);
+    const edges = new THREE.EdgesGeometry(geo);
+    for (let i = 0; i < 3; i++) {
+      const slab = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+        color: 0x14161b, metalness: 0.85, roughness: 0.35,
+      }));
+      const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({
+        color: 0x59e8d5, transparent: true, opacity: 0.35,
+      }));
+      slab.add(line);
+      slab.position.set(-1.6 + i * 1.6, (i - 1) * 0.5, -i * 1.4);
+      slab.rotation.y = i * 0.5;
+      this.slabs.add(slab);
+    }
+    this.slabs.position.set(9, -54, -16);
+    this.scene.add(this.slabs);
+  }
+
+  triggerWarp() { this.warp = 1; }
 
   _buildStars() {
     const N = this.reduced ? 3200 : 9000;
@@ -96,21 +150,24 @@ export class DeepField {
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     geo.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
     geo.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
-    this.starU = { uTime: { value: 0 }, uMid: { value: 0 }, uLevel: { value: 0 }, uPix: { value: 1 } };
+    this.starU = { uTime: { value: 0 }, uMid: { value: 0 }, uLevel: { value: 0 }, uPix: { value: 1 }, uWarp: { value: 0 } };
     const mat = new THREE.ShaderMaterial({
       uniforms: this.starU,
       transparent: true, depthWrite: false,
       blending: THREE.AdditiveBlending,
       vertexShader: `
         attribute float aSize; attribute float aSeed;
-        uniform float uTime, uMid, uLevel, uPix;
+        uniform float uTime, uMid, uLevel, uPix, uWarp;
         varying float vA; varying float vSeed;
         void main(){
-          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          vec3 p = position;
+          // warp drive: stars streak toward the viewer, wrapped on a loop
+          p.z = mix(p.z, mod(p.z + uTime * 260.0 * uWarp, 300.0) - 240.0, step(0.001, uWarp));
+          vec4 mv = modelViewMatrix * vec4(p, 1.0);
           float tw = sin(uTime * (0.5 + aSeed * 2.4) + aSeed * 6.2831) * 0.5 + 0.5;
-          vA = mix(0.35, 1.0, tw * (0.4 + uMid * 1.4));
+          vA = mix(0.35, 1.0, tw * (0.4 + uMid * 1.4)) + uWarp * 0.5;
           vSeed = aSeed;
-          gl_PointSize = aSize * (1.0 + uLevel * 1.1) * uPix * (160.0 / -mv.z);
+          gl_PointSize = aSize * (1.0 + uLevel * 1.1 + uWarp * 2.4) * uPix * (160.0 / -mv.z);
           gl_Position = projectionMatrix * mv;
         }`,
       fragmentShader: `
@@ -187,7 +244,7 @@ export class DeepField {
     };
     this.nebulae = [
       mk(['rgba(38,150,140,0.85)', 'rgba(15,95,99,0.25)'], -90, 10, -160, 260),
-      mk(['rgba(160,110,60,0.7)', 'rgba(110,70,40,0.2)'], 110, -70, -190, 300),
+      mk(['rgba(88,108,138,0.7)', 'rgba(36,50,74,0.2)'], 110, -70, -190, 300),
       mk(['rgba(70,190,175,0.8)', 'rgba(20,80,85,0.22)'], 40, -150, -170, 240),
     ];
   }
@@ -213,36 +270,9 @@ export class DeepField {
     this.scene.add(new THREE.AmbientLight(0x14161c, 2.2));
   }
 
-  _buildFaceCloud() {
-    const N = 156;
-    this.faceN = N;
-    const pos = new Float32Array(N * 3);
-    this.faceHome = new Float32Array(N * 3);
-    for (let i = 0; i < N; i++) {
-      const r = 30 + Math.random() * 60, a = Math.random() * TAU, b = (Math.random() - 0.5) * Math.PI;
-      const x = Math.cos(a) * Math.cos(b) * r - 20;
-      const y = Math.sin(b) * r * 0.7;
-      const z = Math.sin(a) * Math.cos(b) * r - 70;
-      pos.set([x, y, z], i * 3);
-      this.faceHome.set([x, y, z], i * 3);
-    }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    const mat = new THREE.PointsMaterial({
-      size: 0.55, map: glowTexture('rgba(156,255,241,1)', 'rgba(89,232,213,0.4)'),
-      color: 0x9cfff1, transparent: true, opacity: 0.85,
-      depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true,
-    });
-    this.faceCloud = new THREE.Points(geo, mat);
-    this.scene.add(this.faceCloud);
-    this.facePts = null; // set by vision: Float32Array of landmark triplets (normalized)
-  }
-
   setScroll(progress) { // 0..1 across the whole page
     this.targetScroll = progress * (this.sectionCount - 1);
   }
-
-  setFacePoints(pts) { this.facePts = pts; }
 
   resize() {
     const w = innerWidth, h = innerHeight;
@@ -271,7 +301,7 @@ export class DeepField {
       this.nebulae[0].material.opacity = 0.055 + mid * 0.22;
       this.nebulae[1].material.opacity = 0.045 + bass * 0.26;
       this.nebulae[2].material.opacity = 0.05 + level * 0.18;
-      const fov = 58 + bass * 2.4;
+      const fov = 58 + bass * 2.4 + this.warp * 16;
       if (Math.abs(fov - this.camera.fov) > 0.08) {
         this.camera.fov = fov;
         this.camera.updateProjectionMatrix();
@@ -294,36 +324,35 @@ export class DeepField {
     this.camera.position.z = 26;
     this.camera.lookAt(driftX * 0.4 + input.px * 4, y + input.py * 2.5, -30);
 
-    // moon: waits at its station; near the moon section it tilts toward you
+    // warp drive decay + camera punch
+    this.warp *= 0.975;
+    if (this.warp < 0.003) this.warp = 0;
+    this.starU.uWarp.value = this.warp;
+
+    // moon: waits at its station; near the moon section it tilts toward the pointer/hand
     const moonFocus = Math.max(0, 1 - Math.abs(this.scrollY - 5) * 1.2);
     this.moon.rotation.y += dt * 0.03;
-    this.moon.rotation.x = input.face ? input.face.ry * 0.5 * moonFocus : input.py * 0.25 * moonFocus;
-    this.moon.rotation.z = input.face ? input.face.rx * 0.35 * moonFocus : input.px * 0.15 * moonFocus;
+    this.moon.rotation.x = input.py * 0.3 * moonFocus;
+    this.moon.rotation.z = input.px * 0.2 * moonFocus;
     const mScale = 1 + (calm ? 0 : bass * 0.045);
     this.moon.scale.setScalar(mScale);
-    this.moon.position.x = this.moonHome.x - moonFocus * 4 + (input.face ? input.face.rx * 3 * moonFocus : 0);
+    this.moon.position.x = this.moonHome.x - moonFocus * 4;
 
-    // face constellation morph
-    const attr = this.faceCloud.geometry.attributes.position;
-    const arr = attr.array;
-    const k = 0.07;
-    for (let i = 0; i < this.faceN; i++) {
-      let tx, ty, tz;
-      if (this.facePts && this.facePts.length >= this.faceN * 3) {
-        tx = (0.5 - this.facePts[i * 3]) * 30 - 14;
-        ty = (0.5 - this.facePts[i * 3 + 1]) * 24 + y / 1.0 + 2;
-        tz = -46 + this.facePts[i * 3 + 2] * -40;
-      } else {
-        tx = this.faceHome[i * 3];
-        ty = this.faceHome[i * 3 + 1] + y * 0.9;
-        tz = this.faceHome[i * 3 + 2];
-      }
-      arr[i * 3] += (tx - arr[i * 3]) * k;
-      arr[i * 3 + 1] += (ty - arr[i * 3 + 1]) * k;
-      arr[i * 3 + 2] += (tz - arr[i * 3 + 2]) * k;
-    }
-    attr.needsUpdate = true;
-    this.faceCloud.material.opacity = this.facePts ? 0.95 : 0.5;
+    // trajectory ribbon draws itself across the journey section
+    const jp = Math.min(Math.max((this.scrollY - 0.55) / 1.6, 0), 1);
+    this.ribbon.geometry.setDrawRange(0, Math.floor(161 * jp));
+    this.ribbonDots.forEach((d, i) => {
+      d.visible = jp > (i + 0.5) / 9;
+      if (d.visible) d.scale.setScalar(1 + Math.sin(this.t * 2 + i) * 0.18 + mid * 0.9);
+    });
+
+    // payload slabs: slow drift, edges flare with the mids
+    this.slabs.rotation.y = this.t * 0.1;
+    this.slabs.children.forEach((s, i) => {
+      s.rotation.y += dt * (0.12 + i * 0.05);
+      s.position.y = (i - 1) * 0.5 + Math.sin(this.t * 0.7 + i * 2.1) * 0.35;
+      s.children[0].material.opacity = 0.28 + (calm ? 0 : mid * 0.5);
+    });
 
     // nebulae follow the camera loosely so every section has atmosphere
     this.nebulae.forEach((n, i) => { n.position.y = n.userData.oy ?? (n.userData.oy = n.position.y); n.position.y = n.userData.oy + y * 0.82; });

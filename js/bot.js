@@ -3,7 +3,8 @@
    on-device from data.js. No network calls, ever (BOT.endpoint reserved). */
 
 import * as THREE from '../vendor/three/three.module.min.js';
-import { BOT } from './data.js';
+import { age } from './data.js';
+import { I18N, BOT_KEYS, VOICE, t, lang } from './i18n.js';
 
 export function startBot({ canvas }) {
   /* ---------- the little monolith ---------- */
@@ -38,7 +39,7 @@ export function startBot({ canvas }) {
   scene.add(teal);
   scene.add(new THREE.AmbientLight(0x202226, 1.6));
 
-  let t = 0, talking = 0, listening = false;
+  let bt = 0, talking = 0, listening = false;
 
   /* ---------- panel + chat ---------- */
   const panel = document.getElementById('bot-panel');
@@ -59,20 +60,21 @@ export function startBot({ canvas }) {
 
   function answer(text) {
     const q = text.toLowerCase();
+    const L = (I18N[lang] ?? I18N.en).bot;
     let best = null, bestScore = 0;
-    for (const intent of BOT.intents) {
-      const score = intent.k.reduce((s, kw) => s + (q.includes(kw) ? (kw.length > 4 ? 2 : 1) : 0), 0);
+    for (const [intent, keys] of Object.entries(BOT_KEYS)) {
+      const score = keys.reduce((s, kw) => s + (q.includes(kw) ? (kw.length > 4 ? 2 : 1) : 0), 0);
       if (score > bestScore) { bestScore = score; best = intent; }
     }
-    if (!best) return BOT.fallback[Math.floor(Math.random() * BOT.fallback.length)];
-    return typeof best.a === 'function' ? best.a() : best.a;
+    if (!best) return L.fallback[Math.floor(Math.random() * L.fallback.length)];
+    return L.a[best].replace('{age}', age());
   }
 
   function speak(text) {
     if (!('speechSynthesis' in window)) return;
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'en-US'; u.rate = 1.02; u.pitch = 0.72;
+    u.lang = VOICE[lang]; u.rate = 1.02; u.pitch = 0.72;
     u.onstart = () => { talking = 1; };
     u.onend = () => { talking = 0; };
     speechSynthesis.speak(u);
@@ -102,7 +104,6 @@ export function startBot({ canvas }) {
   let rec = null;
   if (SR) {
     rec = new SR();
-    rec.lang = navigator.language?.startsWith('it') ? 'it-IT' : 'en-US';
     rec.interimResults = false;
     rec.maxAlternatives = 1;
     rec.onresult = (e) => send(e.results[0][0].transcript, { voice: true });
@@ -110,13 +111,14 @@ export function startBot({ canvas }) {
     rec.onerror = () => {
       listening = false;
       micBtn.setAttribute('aria-pressed', 'false');
-      addMsg('Microphone unavailable or permission denied. Keyboard still works; I do not judge.', 'bot');
+      addMsg(t('bot.micErr'), 'bot');
     };
   }
   micBtn.addEventListener('click', () => {
-    if (!rec) { addMsg('This browser has no speech recognition. Type to me instead.', 'bot'); return; }
+    if (!rec) { addMsg(t('bot.noSR'), 'bot'); return; }
     if (listening) { rec.stop(); return; }
     listening = true;
+    rec.lang = VOICE[lang];
     micBtn.setAttribute('aria-pressed', 'true');
     rec.start();
   });
@@ -127,21 +129,21 @@ export function startBot({ canvas }) {
     toggle.setAttribute('aria-expanded', String(open));
     if (open && !greeted) {
       greeted = true;
-      addMsg(`${BOT.name} online. ${BOT.tagline} Ask me about Flavio, the score, or the moon.`, 'bot');
+      addMsg(t('bot.greet'), 'bot');
     }
     if (open) input.focus();
   }
 
   /* ---------- per-frame animation, driven by the main loop ---------- */
   function frame(dt, musicLevel = 0) {
-    t += dt;
+    bt += dt;
     const energy = talking ? 0.34 : listening ? 0.22 : 0.05 + musicLevel * 0.1;
     slabs.forEach((s, i) => {
-      s.position.y = Math.sin(t * (talking ? 9 : 1.6) + i * 1.35) * energy * (i === 1 || i === 2 ? 1.25 : 0.8);
-      s.rotation.x = Math.sin(t * 0.7 + i) * 0.04;
+      s.position.y = Math.sin(bt * (talking ? 9 : 1.6) + i * 1.35) * energy * (i === 1 || i === 2 ? 1.25 : 0.8);
+      s.rotation.x = Math.sin(bt * 0.7 + i) * 0.04;
     });
-    group.rotation.y = Math.sin(t * 0.4) * 0.32;
-    teal.intensity = 4.5 + Math.sin(t * 3) * 1.2 + (talking ? 3 : 0);
+    group.rotation.y = Math.sin(bt * 0.4) * 0.32;
+    teal.intensity = 4.5 + Math.sin(bt * 3) * 1.2 + (talking ? 3 : 0);
     renderer.render(scene, cam);
   }
 

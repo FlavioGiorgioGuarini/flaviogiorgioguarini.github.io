@@ -54,7 +54,7 @@ export class Hand3D {
     });
     this.tipMat = new THREE.MeshStandardMaterial({
       color: 0x3a3d43, metalness: 0.5, roughness: 0.52,
-      emissive: 0xc9814f, emissiveIntensity: 0.16,
+      emissive: 0xbfe8e2, emissiveIntensity: 0.14,
     });
     // a warm key of its own, range-limited so it barely touches the scene
     const lamp = new THREE.PointLight(0xf2e6d4, 26, 16, 1.8);

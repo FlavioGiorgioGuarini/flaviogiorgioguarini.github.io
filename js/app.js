@@ -1,51 +1,92 @@
-/* Mission control: wires data, audio, scene, and lazy modules together. */
+/* Mission control: language, audio, scene, hand, and lazy modules. */
 
-import { PROFILE, age, TIMELINE, PROJECTS, CONTACT, SKILLS } from './data.js';
+import { age, STAT_NUMS, SKILL_GEO, PROJECT_LINKS, CONTACT } from './data.js';
+import { I18N, LOCALES, VOICE, t, lang, setLang } from './i18n.js';
 import { AudioEngine } from './audio.js';
 
 const $ = (s) => document.querySelector(s);
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const state = {
-  px: 0, py: 0,           // pointer parallax, -1..1
-  face: null,             // { rx, ry } from vision
-  gaze: null,             // { x, y } iris gaze, -1..1
-  hand: null,             // Hand3D cockpit hand
-  handLive: false,        // true while a real hand is tracked this frame
-  scene: null,
-  vision: null,
-  bot: null,
-  game: null,
-  orbit: null,
+  px: 0, py: 0,
+  hand: null, handLive: false,
+  scene: null, vision: null, bot: null, game: null, orbit: null,
   audio: new AudioEngine('assets/audio/dns-1.m4a'),
   ghost: { x: innerWidth / 2, y: innerHeight / 2, tx: innerWidth / 2, ty: innerHeight / 2 },
 };
 
-/* ---------- content from data ---------- */
-$('#age').textContent = age();
-$('#tm-age').textContent = age();
-$('#yr').textContent = new Date().getFullYear();
+/* ---------- language ---------- */
+const langSel = $('#lang');
+const saved = localStorage.getItem('fgg-lang');
+const guess = (navigator.language || 'en').slice(0, 2).toLowerCase();
+setLang(saved || (LOCALES.includes(guess) ? guess : 'en'));
+langSel.value = lang;
 
-$('#timeline').innerHTML = TIMELINE.map((t) => `
-  <div class="tl-item">
-    <span class="yr num">${t.year}</span>
-    <h3>${t.title} · <span class="tl-place">${t.place}</span></h3>
-    <p>${t.text}</p>
-  </div>`).join('');
+function renderContent() {
+  const L = I18N[lang] ?? I18N.en;
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-ph]').forEach((el) => { el.placeholder = t(el.dataset.i18nPh); });
+  document.querySelectorAll('[data-i18n-aria]').forEach((el) => {
+    el.setAttribute('aria-label', t(el.dataset.i18nAria));
+    el.title = t(el.dataset.i18nAria);
+  });
+  $('#hero-lead').textContent = t('hero.lead').replace('{age}', age());
+  $('#tm-age').textContent = age();
+  $('#yr').textContent = new Date().getFullYear();
 
-$('#projects').innerHTML = PROJECTS.map((p) => `
-  <article class="panel card${p.locked ? ' card--locked' : ''}">
-    <span class="tag">${p.tag}</span>
-    <h3>${p.title}</h3>
-    <p>${p.text}</p>
-    ${p.link ? `<p><a href="${p.link.href}" rel="noopener" target="_blank">${p.link.label} ↗</a></p>` : ''}
-  </article>`).join('');
+  $('#stats').innerHTML = STAT_NUMS.map((n, i) => `
+    <div class="stat"><span class="num">${n}</span><span class="lbl">${L.sections.stats[i]}</span></div>`).join('');
 
-$('#contact-links').innerHTML = CONTACT.links
-  .map((l) => `<a href="${l.href}" rel="noopener" target="_blank">${l.label}</a>`).join('');
+  $('#timeline').innerHTML = L.timeline.map((x) => `
+    <div class="tl-item">
+      <span class="yr num">${x.year}</span>
+      <h3>${x.title} · <span class="tl-place">${x.place}</span></h3>
+      <p>${x.text}</p>
+    </div>`).join('');
 
-$('#orbit-fallback').innerHTML = SKILLS
-  .map((s) => `<li>${s.name}: ${s.note}</li>`).join('');
+  $('#projects').innerHTML = L.projects.map((p, i) => `
+    <article class="panel card${i === 1 ? ' card--locked' : ''}">
+      <span class="tag">${p.tag}</span>
+      <h3>${p.title}</h3>
+      <p>${p.text}</p>
+      ${PROJECT_LINKS[i] ? `<p><a href="${PROJECT_LINKS[i].href}" rel="noopener" target="_blank">${PROJECT_LINKS[i].label} ↗</a></p>` : ''}
+    </article>`).join('');
+
+  $('#contact-links').innerHTML = CONTACT.links
+    .map((l) => `<a href="${l.href}" rel="noopener" target="_blank">${l.label}</a>`).join('');
+  $('#orbit-fallback').innerHTML = L.skills.map((s) => `<li>${s.name}: ${s.note}</li>`).join('');
+  $('#orbit-detail').textContent = t('sections.orbitDefault');
+  $('#ctf-err').textContent = t('ctf.err');
+
+  dispatchEvent(new CustomEvent('langchange'));
+}
+renderContent();
+
+langSel.addEventListener('change', () => {
+  setLang(langSel.value);
+  localStorage.setItem('fgg-lang', langSel.value);
+  speechSynthesis?.cancel();
+  adBtn.setAttribute('aria-pressed', 'false');
+  renderContent();
+});
+
+/* ---------- audio description ---------- */
+const adBtn = $('#ctl-ad');
+adBtn.addEventListener('click', () => {
+  if (!('speechSynthesis' in window)) return;
+  if (speechSynthesis.speaking) {
+    speechSynthesis.cancel();
+    adBtn.setAttribute('aria-pressed', 'false');
+    return;
+  }
+  const u = new SpeechSynthesisUtterance(t('ui.adText'));
+  u.lang = VOICE[lang];
+  u.rate = 0.98;
+  u.onend = () => adBtn.setAttribute('aria-pressed', 'false');
+  adBtn.setAttribute('aria-pressed', 'true');
+  speechSynthesis.speak(u);
+});
 
 /* ---------- entry gate ---------- */
 const gate = $('#gate');
@@ -54,7 +95,7 @@ const soundCtl = $('#ctl-sound');
 function closeGate() {
   gate.style.transition = 'opacity 1.4s';
   gate.style.opacity = '0';
-  document.body.classList.add('loaded'); // hero shutter lines uncover
+  document.body.classList.add('loaded');
   setTimeout(() => { gate.hidden = true; }, 1400);
 }
 $('#enter-sound').addEventListener('click', async () => {
@@ -74,7 +115,7 @@ soundCtl.addEventListener('click', async () => {
   soundCtl.setAttribute('aria-pressed', String(!muted));
 });
 
-/* ---------- pointer + ghost hand (tier-3 companion) ---------- */
+/* ---------- pointer + ghost hand ---------- */
 const ghost = $('#ghost-hand');
 let ghostSeen = false;
 addEventListener('pointermove', (e) => {
@@ -85,7 +126,7 @@ addEventListener('pointermove', (e) => {
   if (!ghostSeen && !state.vision) { ghost.classList.add('on'); ghostSeen = true; }
 }, { passive: true });
 
-/* ---------- camera consent + vision ---------- */
+/* ---------- camera consent + hand tracking ---------- */
 const camCtl = $('#ctl-cam');
 const consent = $('#cam-consent');
 
@@ -93,10 +134,9 @@ camCtl.addEventListener('click', () => {
   if (state.vision) {
     state.vision.stop();
     state.vision = null;
+    state.handLive = false;
     camCtl.setAttribute('aria-pressed', 'false');
-    state.scene?.setFacePoints(null);
-    state.face = null;
-    $('#moon-telemetry').textContent = 'LUNAR LOCK · FACE TRACKING OFF';
+    $('#moon-telemetry').textContent = t('ui.handOff');
     return;
   }
   consent.hidden = false;
@@ -108,36 +148,38 @@ $('#cam-enable').addEventListener('click', async () => {
   try {
     const mod = await import('./vision.js');
     state.vision = await mod.startVision({
-      onHand: onHand,
-      onFace: (pts, rot, gaze) => {
-        state.scene?.setFacePoints(pts);
-        state.face = rot;
-        state.gaze = gaze;
-        $('#moon-telemetry').textContent = 'LUNAR LOCK · FACE ACQUIRED';
-      },
+      onHand,
       onStatus: (msg) => { $('#game-status').textContent = msg; },
     });
     camCtl.setAttribute('aria-pressed', 'true');
-    ghost.classList.remove('on'); // the 3D hand replaces the ghost cursor
-  } catch (err) {
-    $('#moon-telemetry').textContent = 'LUNAR LOCK · CAMERA UNAVAILABLE';
+    ghost.classList.remove('on');
+    $('#moon-telemetry').textContent = t('ui.handOn');
+  } catch {
+    $('#moon-telemetry').textContent = t('ui.handOff');
     camCtl.setAttribute('aria-pressed', 'false');
   } finally {
     camCtl.disabled = false;
   }
 });
 
-/* VR-style gestures: an OPEN hand only mirrors you (the cockpit hand
-   replicates fingers and pose, the page holds still); a CLOSED fist
-   flies the ship: up/down scrolls, left/right jumps sections. */
+/* VR-style gestures: open hand mirrors only; fist flies; two secrets. */
 const SECTIONS = [...document.querySelectorAll('main .section')];
-let lastJump = 0;
+let lastJump = 0, lastHorns = 0, lastMiddle = 0;
+const sarcasm = $('#sarcasm');
+$('#sarcasm-close').addEventListener('click', () => { sarcasm.hidden = true; });
+
 function onHand(h) {
   state.handLive = !!h;
   if (!h) return;
   state.hand?.setPose(h);
   const now = performance.now();
-  if (!h.open) {
+  if (h.gesture === 'horns' && now - lastHorns > 6000) {
+    lastHorns = now;
+    state.scene?.triggerWarp();
+  } else if (h.gesture === 'middle' && now - lastMiddle > 15000 && sarcasm.hidden) {
+    lastMiddle = now;
+    sarcasm.hidden = false;
+  } else if (!h.open && !h.gesture) {
     if (Math.abs(h.dy) > 0.1) scrollBy({ top: h.dy * innerHeight * 0.14, behavior: 'instant' });
     if (Math.abs(h.dx) > 1.0 && now - lastJump > 900) { lastJump = now; jumpSection(h.dx > 0 ? 1 : -1); }
   }
@@ -150,10 +192,8 @@ function jumpSection(dir) {
   const i = Math.min(SECTIONS.length - 1, Math.max(0, currentSection() + dir));
   SECTIONS[i].scrollIntoView({ behavior: reduced ? 'instant' : 'smooth' });
 }
-
-/* keyboard parity for gestures */
 addEventListener('keydown', (e) => {
-  if (e.target.matches('input, textarea')) return;
+  if (e.target.matches('input, textarea, select')) return;
   if (e.key === 'PageDown' || (e.key === 'ArrowRight' && e.altKey)) { e.preventDefault(); jumpSection(1); }
   if (e.key === 'PageUp' || (e.key === 'ArrowLeft' && e.altKey)) { e.preventDefault(); jumpSection(-1); }
 });
@@ -178,17 +218,19 @@ const io = new IntersectionObserver((entries) => {
 }, { threshold: 0.4 });
 SECTIONS.forEach((s) => io.observe(s));
 
-/* ---------- skills orbital map (canvas 2D) ---------- */
+/* ---------- skills orbital map ---------- */
 function makeOrbit(canvas) {
   const g = canvas.getContext('2d');
   const detail = $('#orbit-detail');
   let W, H, C, dpr, sel = -1, hover = -1, t0 = performance.now();
-  const nodes = SKILLS.map((s, i) => {
-    const perOrbit = SKILLS.filter((k) => k.orbit === s.orbit);
-    const idx = perOrbit.indexOf(s);
-    return { ...s, phase: (idx / perOrbit.length) * TAU_(), i };
+  const perOrbitCount = {};
+  const nodes = SKILL_GEO.map((s, i) => {
+    perOrbitCount[s.orbit] = (perOrbitCount[s.orbit] || 0) + 1;
+    return { ...s, idx: perOrbitCount[s.orbit] - 1, i };
   });
-  function TAU_() { return Math.PI * 2; }
+  nodes.forEach((n) => { n.phase = (n.idx / perOrbitCount[n.orbit]) * Math.PI * 2; });
+  const name = (i) => (I18N[lang] ?? I18N.en).skills[i].name;
+  const note = (i) => (I18N[lang] ?? I18N.en).skills[i].note;
   function size() {
     dpr = Math.min(devicePixelRatio || 1, 2);
     W = canvas.clientWidth; H = canvas.clientHeight || W;
@@ -199,16 +241,16 @@ function makeOrbit(canvas) {
   size();
   addEventListener('resize', size);
   const R = (o) => Math.min(W, H) * (0.16 + o * 0.135);
-  function pos(n, t) {
+  function pos(n, tt) {
     const dir = n.orbit === 2 ? -1 : 1;
     const sp = reduced ? 0 : (0.05 / n.orbit) * dir;
-    const a = n.phase + t * sp;
+    const a = n.phase + tt * sp;
     return { x: C.x + Math.cos(a) * R(n.orbit), y: C.y + Math.sin(a) * R(n.orbit) * 0.86 };
   }
-  function pick(mx, my, t) {
+  function pick(mx, my, tt) {
     let best = -1, bd = 26;
     nodes.forEach((n, i) => {
-      const p = pos(n, t);
+      const p = pos(n, tt);
       const d = Math.hypot(p.x - mx, p.y - my);
       if (d < bd) { bd = d; best = i; }
     });
@@ -227,28 +269,25 @@ function makeOrbit(canvas) {
   });
   function show(i) {
     if (i < 0) return;
-    detail.textContent = `${nodes[i].name.toUpperCase()} — ${nodes[i].note}`;
+    detail.textContent = `${name(i).toUpperCase()} — ${note(i)}`;
   }
   return {
     frame(mid) {
-      const t = (performance.now() - t0) / 1000;
+      const tt = (performance.now() - t0) / 1000;
       g.clearRect(0, 0, W, H);
-      // orbits
       g.strokeStyle = 'rgba(233,236,234,0.08)';
       for (let o = 1; o <= 3; o++) {
         g.beginPath();
         g.ellipse(C.x, C.y, R(o), R(o) * 0.86, 0, 0, Math.PI * 2);
         g.stroke();
       }
-      // core
       const pulse = 3.4 + mid * 5;
       g.fillStyle = 'rgba(89,232,213,0.9)';
       g.beginPath(); g.arc(C.x, C.y, pulse, 0, Math.PI * 2); g.fill();
-      // nodes
       nodes.forEach((n, i) => {
-        const p = pos(n, t);
+        const p = pos(n, tt);
         const r = 3 + n.size * 2.2 + (i === hover || i === sel ? 2.5 : 0) + mid * 1.6;
-        const col = n.orbit === 1 ? '#59e8d5' : n.orbit === 2 ? '#e9ecea' : '#c99b66';
+        const col = n.orbit === 1 ? '#59e8d5' : n.orbit === 2 ? '#e9ecea' : '#b9c2c6';
         g.shadowColor = col; g.shadowBlur = i === hover || i === sel ? 18 : 8;
         g.fillStyle = col;
         g.beginPath(); g.arc(p.x, p.y, r, 0, Math.PI * 2); g.fill();
@@ -256,8 +295,8 @@ function makeOrbit(canvas) {
         g.fillStyle = i === hover || i === sel ? '#e9ecea' : 'rgba(151,161,158,0.9)';
         g.font = '10px ui-monospace, Menlo, monospace';
         g.textAlign = 'center';
-        const lw = g.measureText(n.name).width / 2 + 6;
-        g.fillText(n.name.toUpperCase(), Math.min(Math.max(p.x, lw), W - lw), p.y + r + 14);
+        const lw = g.measureText(name(i)).width / 2 + 6;
+        g.fillText(name(i).toUpperCase(), Math.min(Math.max(p.x, lw), W - lw), p.y + r + 14);
       });
     },
   };
@@ -277,7 +316,7 @@ setInterval(() => {
 }, 160);
 
 document.querySelectorAll(
-  '.display--section, .serif-line, .lead, .tl-item, .card, .channel, .stats, .game-frame, .orbit-wrap, .feature-scene, #ctf-form, .links-row'
+  '.display--section, .serif-line, .lead, .card, .channel, .stats, .game-frame, .orbit-wrap, #ctf-form, .links-row'
 ).forEach((el) => el.classList.add('reveal'));
 const rio = new IntersectionObserver((es) => es.forEach((en) => {
   if (!en.isIntersecting) return;
@@ -286,7 +325,7 @@ const rio = new IntersectionObserver((es) => es.forEach((en) => {
   el.style.transitionDelay = `${(Math.max(sibs.indexOf(el), 0) % 6) * 90}ms`;
   el.classList.add('in');
   el.addEventListener('transitionend', () => {
-    el.classList.remove('reveal', 'in');       // hand transforms back to hover states
+    el.classList.remove('reveal', 'in');
     el.style.transitionDelay = '';
   }, { once: true });
   rio.unobserve(el);
@@ -312,8 +351,8 @@ if (matchMedia('(pointer: fine)').matches && !reduced) {
 }
 
 /* real portrait appears only when assets/img/portrait.jpg exists */
-const pimg = document.getElementById('portrait-img');
-pimg?.addEventListener('load', () => { document.getElementById('portrait').hidden = false; });
+const pimg = $('#portrait-img');
+pimg?.addEventListener('load', () => { $('#portrait').hidden = false; });
 
 /* ---------- robot companion (lazy) ---------- */
 $('#bot-toggle').addEventListener('click', async () => {
@@ -322,18 +361,16 @@ $('#bot-toggle').addEventListener('click', async () => {
     state.bot = m.startBot({ canvas: $('#bot-canvas') });
   }
   state.bot.togglePanel();
-}, { once: false });
+});
+import('./bot.js').then((m) => { if (!state.bot) state.bot = m.startBot({ canvas: $('#bot-canvas') }); });
 
-/* boot the idle face of the robot without opening the panel */
-import('./bot.js').then((m) => { if (!state.bot) state.bot = m.startBot({ canvas: $('#bot-canvas'), panelClosed: true }); });
-
-/* ---------- scene + main loop ---------- */
+/* ---------- scene + cockpit hand + main loop ---------- */
 import('./scene.js').then(async ({ DeepField }) => {
   state.scene = new DeepField($('#stage'), { reduced });
   addEventListener('resize', () => state.scene.resize(), { passive: true });
   const { Hand3D } = await import('./hand3d.js');
   state.hand = new Hand3D(state.scene.camera);
-  state.scene.scene.add(state.scene.camera); // camera children need the camera in-graph
+  state.scene.scene.add(state.scene.camera);
 });
 
 const docH = () => document.documentElement.scrollHeight - innerHeight;
@@ -342,34 +379,23 @@ function loop(now) {
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
   state.audio.frame();
-  // iris gaze steers the drift when a face is tracked; pointer otherwise
-  const gx = state.gaze ? state.gaze.x : state.px;
-  const gy = state.gaze ? state.gaze.y : state.py;
   if (state.scene) {
     state.scene.setScroll(docH() > 0 ? scrollY / docH() : 0);
-    state.scene.frame(dt, state.audio, { px: gx, py: gy, face: state.face });
+    state.scene.frame(dt, state.audio, { px: state.px, py: state.py });
   }
   if (state.hand) {
     if (!state.handLive) state.hand.setIdle(now / 1000, state.px, state.py);
     state.hand.update(dt, state.audio.level);
   }
-  // ghost hand easing
   state.ghost.x += (state.ghost.tx - state.ghost.x) * 0.16;
   state.ghost.y += (state.ghost.ty - state.ghost.y) * 0.16;
   ghost.style.transform = `translate(${state.ghost.x}px, ${state.ghost.y}px)`;
   if (state.orbit && nearViewport('#systems')) state.orbit.frame(state.audio.mid);
-  const op = document.getElementById('operator');
-  if (op && !op.hidden && nearViewport('#operator')) {
-    const r = op.getBoundingClientRect();
-    op.firstElementChild.style.transform =
-      `scale(1.06) translateY(${((r.top + r.height / 2 - innerHeight / 2) * -0.045).toFixed(1)}px)`;
-  }
   if (state.bot) state.bot.frame(dt, state.audio.level);
   requestAnimationFrame(loop);
 }
 function nearViewport(sel) {
-  const el = $(sel);
-  const r = el.getBoundingClientRect();
+  const r = $(sel).getBoundingClientRect();
   return r.bottom > -100 && r.top < innerHeight + 100;
 }
 requestAnimationFrame(loop);
