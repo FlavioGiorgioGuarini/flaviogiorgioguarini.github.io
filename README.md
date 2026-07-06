@@ -1,22 +1,38 @@
 # flaviogiorgioguarini.github.io
 
-Personal portfolio — Flavio Giorgio Guarini. Security · Sound · Systems.
+Interstellar-grade portfolio. Static, hand-written, fully self-hosted:
+no build step, no CDN at runtime, no trackers.
 
-- **Stack:** static HTML/CSS/JS, no build step, no trackers. v2 adds two CDN runtime deps (pinned): Three.js 0.170 (import map) and MediaPipe tasks-vision 0.10.14 (lazy, opt-in only).
-- **3D hero:** hand-rolled perspective-projected particle system on Canvas 2D (`js/hero3d.js`) — works without WebGL, honors `prefers-reduced-motion`, adaptive particle budget, touch-drag rotation, magnetic cursor field.
-- **Couture hand (v2, `js/hand3d.js`):** fully procedural segmented hand in Three.js — polished-ivory PBR phalanges, orange emissive joint rings, wrist bracelet. Scroll-guided: appears at section transitions, points along travel direction, tilts with scroll velocity. No generative assets, no skinning — rigid FK hierarchy. Reduced-motion → one static frame. No WebGL → layer absent, site behaves as v1.
-- **Hand tracking (v2, `js/handtrack.js`):** optional. Nothing loads until the pill is clicked; camera + MediaPipe HandLandmarker run 100% on-device (stated in the UI). Index tip = cursor, pinch = click, GPU→CPU delegate fallback, stop button tears down stream+model. Deny/unsupported → silent fallback to normal input.
-- **Languages:** IT / EN / ES via `js/i18n.js` (64 keys ×3, parity-checked).
-- **Hosting:** GitHub Pages. Cloudflare Pages–ready (no build command, output dir = root).
+## What's inside
 
-## Local preview
+- **DNS_1** — original score by Flavio (Ableton, 192 kHz master), streamed as AAC
+  and analysed live with the Web Audio API. Stars, dust and nebulae move with the music.
+- **Deep-field scene** — Three.js (self-hosted, pinned 0.182): shader starfield,
+  audio-reactive dust, procedural displacement moon.
+- **Vision tiers** — optional on-device MediaPipe hand + face tracking (self-hosted
+  WASM, lazy-loaded, camera opt-in). Open palm steers, fist jumps sections, your
+  face becomes a constellation in the starfield. No camera → a ghost hand follows
+  the pointer; keyboard and touch always have full parity.
+- **CAERUS** — original TARS-inspired slab companion. Voice in/out via the Web
+  Speech API, knowledge fully on-device; no external AI endpoint, no key to leak.
+- **Past Lives Arcade** — 8-bit map of the journey. One log matters to the moon.
+- **CTF Moon** — answer verified as SHA-256 (never stored in clear), reward form
+  guarded by honeypot, minimum-time gate and client rate limit, delivered via
+  FormSubmit AJAX.
 
-ES modules require a server (not `file://`):
+## Security posture
 
+Strict CSP meta (`default-src 'self'`; the only connect-src exception is
+formsubmit.co; `'wasm-unsafe-eval'` for MediaPipe). No inline scripts or styles,
+no eval, input length caps everywhere, external links `rel="noopener"`.
+
+## Operations note
+
+The CTF email endpoint uses FormSubmit: the **first submission from the live
+domain sends an activation link to the inbox — click it once** and the flow is live.
+
+## Local dev
+
+```bash
+python3 -m http.server 8017
 ```
-python3 -m http.server 8000
-```
-
-## Content pipeline
-
-Copy is mined from a private Obsidian knowledge base and reviewed for public safety before landing here. No fact on this site is invented. Content source of truth: `wiki/personal/website/site-content-source.md` (private vault).

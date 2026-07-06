@@ -1,299 +1,275 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Flavio Giorgio Guarini — Security · Sound · Systems</title>
-  <meta name="description" content="Cybersecurity student in the top 3% of TryHackMe, official Ableton Live beta tester, two bachelor's degrees in parallel. Bari, Italy.">
-  <meta property="og:title" content="Flavio Giorgio Guarini">
-  <meta property="og:description" content="Security · Sound · Systems — two degrees in parallel, top 3% on TryHackMe, official Ableton beta tester.">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://flaviogiorgioguarini.github.io/">
-  <link rel="canonical" href="https://flaviogiorgioguarini.github.io/">
-  <meta name="theme-color" content="#060606">
-  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
-    }
-  }
-  </script>
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "Person",
-    "name": "Flavio Giorgio Guarini",
-    "url": "https://flaviogiorgioguarini.github.io/",
-    "email": "mailto:guariniflavio@gmail.com",
-    "jobTitle": "Cybersecurity student · Sound designer",
-    "address": { "@type": "PostalAddress", "addressLocality": "Bari", "addressCountry": "IT" },
-    "alumniOf": { "@type": "CollegeOrUniversity", "name": "Universitas Mercatorum" },
-    "knowsLanguage": ["it", "en", "es"],
-    "sameAs": [
-      "https://github.com/FlavioGiorgioGuarini",
-      "https://www.linkedin.com/in/flavioguarini",
-      "https://tryhackme.com/p/FlavioGiorgioGuarini"
-    ]
-  }
-  </script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; font-src 'self'; media-src 'self'; connect-src 'self' https://formsubmit.co; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<title>Flavio Giorgio Guarini — Security · Sound · Systems</title>
+<meta name="description" content="Interstellar-grade portfolio of Flavio Giorgio Guarini: cybersecurity (TryHackMe top 3%), sound design (official Ableton beta tester), two degrees in parallel. Enter the universe, hear the original score, solve the moon.">
+<link rel="canonical" href="https://flaviogiorgioguarini.github.io/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Flavio Giorgio Guarini — Toward the Stars">
+<meta property="og:description" content="Security by discipline, sound by instinct, systems by habit. A portfolio you enter, hear, and play.">
+<meta property="og:url" content="https://flaviogiorgioguarini.github.io/">
+<meta property="og:image" content="https://flaviogiorgioguarini.github.io/assets/img/og-image.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#05060a">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="preload" as="font" type="font/woff2" href="assets/fonts/syncopate-v24-latin-regular.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="assets/fonts/stix-two-text-v18-latin-500italic.woff2" crossorigin>
+<link rel="preload" as="image" imagesrcset="assets/img/hero-hand-sm.jpg 640w, assets/img/hero-hand.jpg 1200w" imagesizes="(max-width: 900px) 70vw, 40vw">
+<link rel="stylesheet" href="css/style.css">
+<script type="module" src="js/app.js"></script>
 </head>
 <body>
-  <a class="skip" href="#about" data-i18n="skip">Skip to content</a>
 
-  <header class="nav" id="nav">
-    <a class="nav__logo" href="#top" aria-label="Home">FG<span>—</span>G</a>
-    <nav class="nav__links" aria-label="Primary">
-      <a href="#about" data-i18n="nav.about">About</a>
-      <a href="#work" data-i18n="nav.work">Work</a>
-      <a href="#timeline" data-i18n="nav.timeline">Timeline</a>
-      <a href="#contact" data-i18n="nav.contact">Contact</a>
-    </nav>
-    <div class="nav__lang" role="group" aria-label="Language">
-      <button data-lang="it" aria-label="Italiano">IT</button>
-      <button data-lang="en" aria-label="English">EN</button>
-      <button data-lang="es" aria-label="Español">ES</button>
+<a class="skip-link" href="#home">Skip to content</a>
+
+<canvas id="stage" aria-hidden="true"></canvas>
+
+<!-- Entry gate: doubles as the user gesture required for audio -->
+<div class="overlay" id="gate">
+  <div class="overlay__box panel">
+    <p class="serif-line gate-sig">A signal from Bari, Italy</p>
+    <h2>Flavio Giorgio Guarini</h2>
+    <p class="small">This site carries an original score, DNS_1, composed by Flavio.
+    Space out there moves with the music. Camera and microphone stay off unless you enable them;
+    nothing is recorded, nothing leaves your device.</p>
+    <div class="actions">
+      <button class="btn btn--solid" id="enter-sound">Enter with sound</button>
+      <button class="btn" id="enter-silent">Enter in silence</button>
     </div>
-  </header>
-
-  <main id="top">
-    <!-- HERO -->
-    <section class="hero" aria-label="Intro">
-      <canvas id="hero-canvas" aria-hidden="true"></canvas>
-      <div class="hero__inner">
-        <p class="hero__kicker mono" data-i18n="hero.kicker">SECURITY · SOUND · SYSTEMS</p>
-        <h1 class="hero__name">Flavio Giorgio<br>Guarini<span class="accent">.</span></h1>
-        <p class="hero__sub" data-i18n="hero.sub">Two degrees in parallel. Top 3% on TryHackMe. Official Ableton beta tester. I build systems that defend, automate and resonate.</p>
-        <div class="hero__cta">
-          <a class="btn btn--solid magnetic" href="#work" data-i18n="hero.cta1">View work</a>
-          <a class="btn btn--ghost magnetic" href="#contact" data-i18n="hero.cta2">Get in touch</a>
-        </div>
-      </div>
-      <div class="hero__scroll mono" aria-hidden="true"><span data-i18n="hero.scroll">scroll</span><i></i></div>
-    </section>
-
-    <!-- ABOUT -->
-    <section class="section" id="about">
-      <p class="section__kicker mono"><span class="accent">01</span> <span data-i18n="about.kicker">About</span></p>
-      <div class="about">
-        <h2 class="about__lead" data-i18n="about.lead">I run two engineering tracks at once — cybersecurity by discipline, sound by instinct.</h2>
-        <div class="about__body">
-          <p data-i18n="about.p1">I'm 22, from Bari, Italy. I'm completing two bachelor's degrees in parallel — Computer Engineering and Communication &amp; Multimedia — while ranking in the top 3% of TryHackMe worldwide.</p>
-          <p data-i18n="about.p2">Before security there was sound: official Ableton Live beta tester since 2019, specialized in MPE and electronic composition. In between: founding creative ventures, teaching languages, assisting a confidential client in Rome, and a final school year in Gran Canaria.</p>
-          <p data-i18n="about.p3">My rule is simple — anything I do twice gets automated, documented, and improved while I sleep.</p>
-        </div>
-      </div>
-      <dl class="stats">
-        <div class="stat reveal"><dt class="stat__num accent">3%</dt><dd class="mono" data-i18n="stats.thm">top of TryHackMe, global</dd></div>
-        <div class="stat reveal"><dt class="stat__num accent">2×</dt><dd class="mono" data-i18n="stats.degrees">degrees in parallel</dd></div>
-        <div class="stat reveal"><dt class="stat__num accent">6+</dt><dd class="mono" data-i18n="stats.sound">years in sound design</dd></div>
-        <div class="stat reveal"><dt class="stat__num accent">3</dt><dd class="mono" data-i18n="stats.langs">working languages</dd></div>
-      </dl>
-    </section>
-
-    <!-- FOCUS -->
-    <section class="section" id="focus">
-      <p class="section__kicker mono"><span class="accent">02</span> <span data-i18n="focus.kicker">Focus</span></p>
-      <div class="pillars">
-        <article class="pillar reveal">
-          <h3 data-i18n="focus.sec.t">Security</h3>
-          <p data-i18n="focus.sec.p">Offensive-minded fundamentals: 148 TryHackMe rooms, Advent of Cyber 2025, Python for security automation, Flipper Zero hardware work — Sub-GHz, NFC, RFID, BadUSB.</p>
-        </article>
-        <article class="pillar reveal">
-          <h3 data-i18n="focus.snd.t">Sound</h3>
-          <p data-i18n="focus.snd.p">Official Ableton Live beta tester (Suite 12.3). MPE technology, electronic composition, audio-hardware integration. Sound is my longest-running system.</p>
-        </article>
-        <article class="pillar reveal">
-          <h3 data-i18n="focus.sys.t">Systems</h3>
-          <p data-i18n="focus.sys.p">Second-brain architectures, AI-assisted operations, workflow automation. I design pipelines where knowledge compounds instead of evaporating.</p>
-        </article>
-      </div>
-    </section>
-
-    <!-- WORK / PROJECTS -->
-    <section class="section" id="work">
-      <p class="section__kicker mono"><span class="accent">03</span> <span data-i18n="work.kicker">Selected work</span></p>
-      <div class="cards">
-        <article class="card reveal">
-          <p class="card__tag mono" data-i18n="work.p1.tag">SECURITY · FLAGSHIP</p>
-          <h3>SIEM 3D <span class="accent">v2.0</span></h3>
-          <p data-i18n="work.p1.p">Security information &amp; event management, reimagined as a three-dimensional interface. Python core (74%), web front end (26%). Active development.</p>
-          <a class="card__link mono" href="https://github.com/FlavioGiorgioGuarini" target="_blank" rel="noopener" data-i18n="work.p1.link">GitHub ↗</a>
-        </article>
-        <article class="card reveal">
-          <p class="card__tag mono" data-i18n="work.p2.tag">SOUND · SINCE 2019</p>
-          <h3 data-i18n="work.p2.t">Ableton Live beta testing</h3>
-          <p data-i18n="work.p2.p">Official beta tester for Ableton Live (Suite 12.3). Six years of MPE-focused testing, electronic composition and hardware-integration work for audio engineering.</p>
-        </article>
-        <article class="card reveal">
-          <p class="card__tag mono" data-i18n="work.p3.tag">VENTURE · 2025 · ARCHIVED</p>
-          <h3>VISIONOIR</h3>
-          <p data-i18n="work.p3.p">Founded and directed a creative branding-and-sound ecosystem: contracts, budgets, a network of multidisciplinary artists. Closed deliberately to go all-in on security operations.</p>
-        </article>
-        <article class="card reveal">
-          <p class="card__tag mono" data-i18n="work.p4.tag">VENTURE · 2023–24</p>
-          <h3>Adhuna Collective</h3>
-          <p data-i18n="work.p4.p">Founded and coordinated mindfulness-and-sound retreats, producing "The Methe Resort Experience" (May 2024).</p>
-        </article>
-        <article class="card card--teaser reveal">
-          <p class="card__tag mono" data-i18n="work.p5.tag">IN THE LAB</p>
-          <h3 data-i18n="work.p5.t">Second Brain AI</h3>
-          <p data-i18n="work.p5.p">Coming soon.</p>
-        </article>
-      </div>
-    </section>
-
-    <!-- TIMELINE -->
-    <section class="section" id="timeline">
-      <p class="section__kicker mono"><span class="accent">04</span> <span data-i18n="tl.kicker">Timeline</span></p>
-      <div class="tstrip" id="tstrip" tabindex="0" aria-label="Career timeline, horizontally scrollable">
-        <article class="tnode reveal">
-          <svg class="tnode__vig" viewBox="0 0 200 90" aria-hidden="true">
-            <g stroke="#ff5a1f" stroke-width="2" opacity="0.9">
-              <line x1="20" y1="70" x2="20" y2="48"/><line x1="34" y1="70" x2="34" y2="30"/><line x1="48" y1="70" x2="48" y2="55"/><line x1="62" y1="70" x2="62" y2="22"/><line x1="76" y1="70" x2="76" y2="42"/><line x1="90" y1="70" x2="90" y2="58"/>
-            </g>
-            <path d="M110 70 Q 130 20 190 34" fill="none" stroke="#2fd8e6" stroke-width="1" opacity="0.45"/>
-            <line x1="10" y1="70" x2="190" y2="70" stroke="#f5f5f0" stroke-width="0.6" opacity="0.35"/>
-          </svg>
-          <span class="tnode__year mono">2019</span>
-          <h3 data-i18n="tl.t1">Sound ignition</h3>
-          <p data-i18n="tl.i1">Freelance sound design begins — official Ableton Live beta testing. Bronze medal, 200 m butterfly, Infantil Champs, Tenerife.</p>
-        </article>
-        <article class="tnode reveal">
-          <svg class="tnode__vig" viewBox="0 0 200 90" aria-hidden="true">
-            <circle cx="150" cy="52" r="16" fill="none" stroke="#ff5a1f" stroke-width="2"/>
-            <line x1="10" y1="60" x2="190" y2="60" stroke="#f5f5f0" stroke-width="0.6" opacity="0.4"/>
-            <line x1="10" y1="66" x2="190" y2="66" stroke="#f5f5f0" stroke-width="0.4" opacity="0.25"/>
-            <path d="M30 60 L38 34 M38 34 L46 60 M34 48 h8" stroke="#f5f5f0" stroke-width="1.4" fill="none" opacity="0.8"/>
-            <path d="M58 34 v26 M58 34 h10 q6 3 0 8 h-10 M58 47 h10 q7 4 0 13" stroke="#2fd8e6" stroke-width="1.2" fill="none" opacity="0.5"/>
-          </svg>
-          <span class="tnode__year mono">2023</span>
-          <h3 data-i18n="tl.t2">Island diploma</h3>
-          <p data-i18n="tl.i2">US-accredited diploma — The American School of Las Palmas, Gran Canaria. Founded Adhuna Collective; private English &amp; Spanish teaching.</p>
-        </article>
-        <article class="tnode reveal">
-          <svg class="tnode__vig" viewBox="0 0 200 90" aria-hidden="true">
-            <g stroke="#f5f5f0" stroke-width="0.7" opacity="0.4">
-              <line x1="10" y1="14" x2="100" y2="45"/><line x1="10" y1="76" x2="100" y2="45"/>
-              <line x1="190" y1="14" x2="100" y2="45"/><line x1="190" y1="76" x2="100" y2="45"/>
-            </g>
-            <g fill="#ff5a1f" opacity="0.85">
-              <rect x="60" y="38" width="34" height="5" rx="2"/><rect x="104" y="46" width="26" height="5" rx="2"/>
-            </g>
-            <rect x="82" y="24" width="36" height="5" rx="2" fill="#f5f5f0" opacity="0.5"/>
-          </svg>
-          <span class="tnode__year mono">2024</span>
-          <h3 data-i18n="tl.t3">Rome, discretion</h3>
-          <p data-i18n="tl.i3">Personal assistant to a high-profile confidential client, Rome — multilingual operations under strict discretion.</p>
-        </article>
-        <article class="tnode reveal">
-          <svg class="tnode__vig" viewBox="0 0 200 90" aria-hidden="true">
-            <g fill="#0c0c0c" stroke="#f5f5f0" stroke-width="0.7" opacity="0.7">
-              <rect x="18" y="40" width="16" height="34"/><rect x="42" y="26" width="16" height="48"/><rect x="66" y="48" width="16" height="26"/><rect x="90" y="18" width="16" height="56"/>
-            </g>
-            <g stroke="#ff5a1f" stroke-width="1.2" stroke-dasharray="3 5" opacity="0.9">
-              <line x1="130" y1="8" x2="130" y2="74"/><line x1="146" y1="16" x2="146" y2="74"/><line x1="162" y1="4" x2="162" y2="74"/>
-            </g>
-            <path d="M20 84 Q 100 76 180 84" fill="none" stroke="#2fd8e6" stroke-width="1" opacity="0.45"/>
-          </svg>
-          <span class="tnode__year mono">2025</span>
-          <h3 data-i18n="tl.t4">Security pivot</h3>
-          <p data-i18n="tl.i4">B.Sc. Communication &amp; Multimedia begins. VISIONOIR founded and strategically closed. Pivot to security: Python for security, TryHackMe grind, Advent of Cyber 2025.</p>
-        </article>
-        <article class="tnode reveal">
-          <svg class="tnode__vig" viewBox="0 0 200 90" aria-hidden="true">
-            <g stroke="#f5f5f0" stroke-width="0.5" opacity="0.3">
-              <path d="M10 20 h180 M10 38 h180 M10 56 h180 M10 74 h180"/>
-              <path d="M40 8 v74 M90 8 v74 M140 8 v74"/>
-            </g>
-            <path d="M10 30 C 70 30 130 62 190 62" fill="none" stroke="#ff5a1f" stroke-width="2"/>
-            <path d="M10 64 C 70 64 130 32 190 32" fill="none" stroke="#ff5a1f" stroke-width="2" opacity="0.6"/>
-          </svg>
-          <span class="tnode__year mono">2026</span>
-          <h3 data-i18n="tl.t5">Parallel tracks</h3>
-          <p data-i18n="tl.i5">B.Sc. Computer Engineering begins in parallel. Google AI certifications. Erasmus+ BIP at Universidad de León, selected with scholarship.</p>
-        </article>
-        <article class="tnode reveal">
-          <svg class="tnode__vig" viewBox="0 0 200 90" aria-hidden="true">
-            <path d="M10 20 C 90 20 120 45 168 45 M10 70 C 90 70 120 45 168 45" fill="none" stroke="#f5f5f0" stroke-width="1" opacity="0.6"/>
-            <circle cx="168" cy="45" r="5" fill="#ff5a1f"/>
-            <circle cx="168" cy="45" r="12" fill="none" stroke="#ff5a1f" stroke-width="0.8" opacity="0.5"/>
-            <circle cx="168" cy="45" r="20" fill="none" stroke="#2fd8e6" stroke-width="0.6" opacity="0.3"/>
-          </svg>
-          <span class="tnode__year mono">2027</span>
-          <h3 data-i18n="tl.t6">Convergence</h3>
-          <p data-i18n="tl.i6">Target: double graduation.</p>
-        </article>
-      </div>
-      <p class="tstrip__hint mono" data-i18n="tl.hint">drag · scroll · or swipe with your hand</p>
-    </section>
-
-    <!-- CREDENTIALS -->
-    <section class="section" id="credentials">
-      <p class="section__kicker mono"><span class="accent">05</span> <span data-i18n="cred.kicker">Credentials</span></p>
-      <div class="cred">
-        <div class="cred__col reveal">
-          <h3 class="mono" data-i18n="cred.certs.t">CERTIFICATIONS</h3>
-          <ul>
-            <li>TryHackMe — Advent of Cyber 2025 <span class="dim mono">12/2025</span></li>
-            <li>Google — AI Essentials <span class="dim mono">05/2026</span></li>
-            <li>Google — Prompting Essentials <span class="dim mono">05/2026</span></li>
-            <li>Google — Accelerate Your Job Search with AI <span class="dim mono">05/2026</span></li>
-            <li>TOEFL iBT <span class="dim mono">12/2022</span></li>
-            <li>DELE B1 — Instituto Cervantes <span class="dim mono">2018</span></li>
-          </ul>
-        </div>
-        <div class="cred__col reveal">
-          <h3 class="mono" data-i18n="cred.langs.t">LANGUAGES</h3>
-          <ul>
-            <li data-i18n="cred.l1">Italian — native</li>
-            <li data-i18n="cred.l2">English — fluent, daily working language</li>
-            <li data-i18n="cred.l3">Spanish — fluent; lived and studied in Spain</li>
-            <li data-i18n="cred.l4">German — in progress, daily practice</li>
-            <li data-i18n="cred.l5">Portuguese (BR) — early study</li>
-          </ul>
-        </div>
-      </div>
-    </section>
-
-    <!-- CONTACT -->
-    <section class="section section--contact" id="contact">
-      <p class="section__kicker mono"><span class="accent">06</span> <span data-i18n="contact.kicker">Contact</span></p>
-      <h2 class="contact__line" data-i18n="contact.line">Building something that needs both precision and taste?</h2>
-      <a class="contact__mail magnetic" href="mailto:guariniflavio@gmail.com">guariniflavio@gmail.com</a>
-      <div class="contact__socials mono">
-        <a href="https://github.com/FlavioGiorgioGuarini" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://www.linkedin.com/in/flavioguarini" target="_blank" rel="noopener">LinkedIn</a>
-        <a href="https://tryhackme.com/p/FlavioGiorgioGuarini" target="_blank" rel="noopener">TryHackMe</a>
-      </div>
-    </section>
-  </main>
-
-  <footer class="footer mono">
-    <span>© 2026 Flavio Giorgio Guarini — Bari, IT</span>
-    <span data-i18n="footer.note">Built from my second brain. No trackers, no cookies.</span>
-  </footer>
-
-  <!-- v2 — couture hand layer -->
-  <canvas id="hand-canvas" aria-hidden="true"></canvas>
-  <div class="hand-ui" id="hand-ui" hidden>
-    <button class="hand-ui__btn mono" id="hand-toggle" aria-pressed="false">
-      <span class="hand-ui__dot" aria-hidden="true"></span>
-      <span id="hand-toggle-label" data-i18n="hand.enable">Hand control</span>
-    </button>
-    <p class="hand-ui__privacy mono" data-i18n="hand.privacy">Camera runs on-device only. No video ever leaves this browser.</p>
   </div>
-  <div class="hand-cursor" id="hand-cursor" aria-hidden="true" hidden></div>
+</div>
 
-  <script src="js/i18n.js" defer></script>
-  <script src="js/hero3d.js" defer></script>
-  <script src="js/main.js" defer></script>
-  <script src="js/hand3d.js" type="module"></script>
-  <script src="js/handtrack.js" defer></script>
+<!-- Camera consent, opened only from the camera toggle -->
+<div class="overlay" id="cam-consent" hidden>
+  <div class="overlay__box panel">
+    <h2>Hands as instruments</h2>
+    <p class="small">With your permission this page tracks your hands and face
+    <strong>locally, in your browser</strong>: open palm steers, closed fist jumps sections,
+    your face becomes a constellation in the starfield and the moon follows your gaze.
+    No frame is stored, sent, or kept. Turn it off any time with the same button.</p>
+    <div class="actions">
+      <button class="btn btn--solid" id="cam-enable">Enable camera</button>
+      <button class="btn" id="cam-decline">Not now</button>
+    </div>
+  </div>
+</div>
+
+<header class="topbar">
+  <span class="topbar__name">FGG · Deep Field</span>
+  <div class="topbar__controls">
+    <button class="ctl" id="ctl-sound" aria-pressed="false" aria-label="Toggle soundtrack" title="Soundtrack">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path class="wave" d="M16 9a4 4 0 0 1 0 6"/><path class="wave" d="M18.5 6.5a8 8 0 0 1 0 11"/></svg>
+    </button>
+    <button class="ctl" id="ctl-cam" aria-pressed="false" aria-label="Toggle camera tracking" title="Camera tracking">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10.5 21 8v8l-5-2.5"/></svg>
+    </button>
+  </div>
+</header>
+
+<nav aria-label="Sections">
+  <ul class="rail" id="rail">
+    <li><a href="#home"><span class="lbl">Signal</span><span class="dot"></span></a></li>
+    <li><a href="#journey"><span class="lbl">Trajectory</span><span class="dot"></span></a></li>
+    <li><a href="#payload"><span class="lbl">Payload</span><span class="dot"></span></a></li>
+    <li><a href="#systems"><span class="lbl">Systems</span><span class="dot"></span></a></li>
+    <li><a href="#arcade"><span class="lbl">Arcade</span><span class="dot"></span></a></li>
+    <li><a href="#moon"><span class="lbl">Moon</span><span class="dot"></span></a></li>
+    <li><a href="#contact"><span class="lbl">Contact</span><span class="dot"></span></a></li>
+  </ul>
+</nav>
+
+<main id="main">
+
+  <!-- HERO -->
+  <section class="section" id="home" aria-label="Introduction">
+    <div class="section__inner hero-grid">
+      <div class="hero-copy">
+        <p class="telemetry num" aria-hidden="true">41.12°N 16.87°E · BARI · T+<span id="tm-age">22</span>Y</p>
+        <h1 class="display display--hero">Toward<br>the stars</h1>
+        <p class="serif-line hero-serif">Working with me means going beyond: response, then evolution.</p>
+        <p class="lead hero-lead">I'm <span id="age">22</span>, from Bari, Italy. Two engineering tracks at once:
+        cybersecurity by discipline, sound by instinct. The music you're hearing is mine.</p>
+        <div class="hero-actions">
+          <a class="btn btn--solid" href="#journey">Begin the trajectory</a>
+          <a class="btn" href="#moon">Solve the moon</a>
+        </div>
+      </div>
+      <figure class="hero-hand" aria-hidden="false">
+        <img srcset="assets/img/hero-hand-sm.jpg 640w, assets/img/hero-hand.jpg 1200w"
+             sizes="(max-width: 900px) 70vw, 40vw" src="assets/img/hero-hand.jpg"
+             alt="Hyperreal bionic hand reaching upward, teal light seeping between titanium plates"
+             width="1200" height="1600" fetchpriority="high">
+      </figure>
+    </div>
+  </section>
+
+  <!-- TRAJECTORY -->
+  <section class="section" id="journey" aria-label="Trajectory: the story so far">
+    <div class="section__inner split split--top">
+      <div class="sticky-head">
+        <h2 class="display display--section">The<br>trajectory</h2>
+        <p class="serif-line sub-serif">Eight burns from the Adriatic to escape velocity.</p>
+        <p class="small sub-note">Scroll, or raise an open palm and push upward. Each waypoint lights as you pass it.</p>
+        <div class="stats readout" aria-label="Mission readouts">
+          <div class="stat"><span class="num">Top <em>3%</em></span><span class="lbl">TryHackMe global</span></div>
+          <div class="stat"><span class="num"><em>2</em>×</span><span class="lbl">Degrees in parallel</span></div>
+          <div class="stat"><span class="num"><em>6</em>+ yrs</span><span class="lbl">Sound design</span></div>
+          <div class="stat"><span class="num"><em>3</em></span><span class="lbl">Working languages</span></div>
+        </div>
+      </div>
+      <div class="timeline" id="timeline"><!-- rendered from data.js --></div>
+    </div>
+  </section>
+
+  <!-- PAYLOAD -->
+  <section class="section" id="payload" aria-label="Projects">
+    <img class="payload-fist" src="assets/img/fist.jpg" srcset="assets/img/fist-sm.jpg 520w, assets/img/fist.jpg 1000w"
+         sizes="(max-width: 900px) 60vw, 34vw" loading="lazy"
+         alt="Bionic fist holding light, teal rays escaping between the fingers" width="1000" height="1000">
+    <div class="section__inner">
+      <h2 class="display display--section">Payload<br>manifest</h2>
+      <p class="lead sub-lead">Three items cleared for exhibition. Everything else stays in the hold.</p>
+      <div class="grid-3" id="projects"><!-- rendered from data.js --></div>
+    </div>
+  </section>
+
+  <!-- SYSTEMS -->
+  <section class="section" id="systems" aria-label="Skills">
+    <div class="section__inner split">
+      <div>
+        <h2 class="display display--section">Systems<br>online</h2>
+        <p class="serif-line sub-serif">Three core drives, three growing orbits.</p>
+        <p class="small sub-note" id="orbit-note">Hover or focus a node to read its telemetry. Inner orbit is discipline; outer orbit is appetite.</p>
+        <p class="small orbit-detail num" id="orbit-detail" role="status">SELECT A NODE</p>
+      </div>
+      <div class="orbit-wrap">
+        <canvas id="orbit" role="img" aria-label="Orbital map of skills: Cybersecurity, AI Engineering and Sound Design on the core orbit; Software and 3D, Communication, Automation on the second; German and Portuguese growing on the third."></canvas>
+        <ul class="visually-hidden" id="orbit-fallback"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ARCADE -->
+  <section class="section" id="arcade" aria-label="Mini game: a map of the past">
+    <div class="section__inner">
+      <h2 class="display display--section">Past lives<br>arcade</h2>
+      <p class="lead sub-lead">An 8-bit chart of everywhere the trajectory has touched.
+      Walk the pilot, dock at a beacon, read the log. One of these logs matters to the moon.</p>
+      <div class="game-frame">
+        <canvas id="game" width="768" height="512" tabindex="0" aria-label="8-bit exploration game. Use arrow keys or WASD to move, walk into a glowing beacon to open its log."></canvas>
+      </div>
+      <div class="game-hud">
+        <p class="small" id="game-status">Arrows / WASD to fly · walk into a beacon to dock</p>
+        <div class="dpad" id="dpad" aria-hidden="true">
+          <button data-d="up" aria-label="Move up">▲</button>
+          <button data-d="left" aria-label="Move left">◀</button>
+          <button data-d="down" aria-label="Move down">▼</button>
+          <button data-d="right" aria-label="Move right">▶</button>
+        </div>
+      </div>
+      <div class="panel zone-card" id="zone-card" hidden>
+        <p class="tag" id="zone-tag"></p>
+        <h3 id="zone-name"></h3>
+        <p id="zone-story"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- MOON -->
+  <section class="section" id="moon" aria-label="CTF challenge: the moon">
+    <div class="section__inner split">
+      <div>
+        <h2 class="display display--section">The moon<br>keeps a date</h2>
+        <p class="serif-line sub-serif">Some days split a life into before and after.</p>
+        <p class="lead sub-lead">Answer with the day everything changed:
+        the date I moved to Gran Canaria. Crack it and you win my attention,
+        my friendship, and a coffee wherever our orbits cross.</p>
+        <form id="ctf-form" autocomplete="off" novalidate>
+          <label class="field"><span>DD/MM/YYYY</span>
+            <input type="text" id="ctf-answer" name="answer" inputmode="numeric" maxlength="10" placeholder="··/··/····" required>
+            <em class="err" id="ctf-err">Not that date. The arcade keeps a landing log.</em>
+          </label>
+          <button class="btn btn--solid" type="submit">Transmit answer</button>
+        </form>
+        <form id="win-form" class="win-form" hidden>
+          <p class="tag tag--teal">Access granted · coordinates accepted</p>
+          <h3 class="win-title">You found the day</h3>
+          <p class="small">09/08/2017. Leave your coordinates and the coffee is on me.</p>
+          <label class="field"><span>Name</span><input type="text" name="name" maxlength="80" required></label>
+          <label class="field"><span>Email</span><input type="email" name="email" maxlength="120" required></label>
+          <label class="field"><span>Message</span><textarea name="message" maxlength="1000" placeholder="Where should our orbits cross?"></textarea></label>
+          <input type="text" name="_honey" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <button class="btn btn--solid" type="submit" id="win-send">Send transmission</button>
+          <p class="small" id="win-status" role="status"></p>
+        </form>
+        <div class="panel zone-card" id="win-done" hidden>
+          <p class="tag tag--teal">Transmission received</p>
+          <h3>Welcome to the crew</h3>
+          <p>You solved what most visitors scroll past, which tells me plenty.
+          I'll reply personally. First coffee, espresso or cortado, is my treat.</p>
+        </div>
+      </div>
+      <div class="moon-hint">
+        <p class="small num" id="moon-telemetry" aria-hidden="true">LUNAR LOCK · FACE TRACKING OFF</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section class="section" id="contact" aria-label="Contact">
+    <div class="section__inner contact-inner">
+      <p class="serif-line">No middlemen between you and me.</p>
+      <h2 class="display display--section contact-title">Open a<br>channel</h2>
+      <div class="channels">
+        <a class="channel panel" href="mailto:guariniflavio@gmail.com">
+          <span class="tag">Email</span>
+          <span class="channel__v">guariniflavio@gmail.com</span>
+        </a>
+        <a class="channel panel" href="https://wa.me/393495446488" rel="noopener" target="_blank">
+          <span class="tag">WhatsApp</span>
+          <span class="channel__v num">+39 349 544 6488</span>
+        </a>
+      </div>
+      <p class="links-row" id="contact-links"><!-- rendered --></p>
+      <p class="small foot-note">Hand-built, self-hosted, zero trackers. Your camera, microphone and audio choices never leave this browser. © <span id="yr">2026</span> Flavio Giorgio Guarini.</p>
+    </div>
+  </section>
+
+</main>
+
+<!-- Robot companion -->
+<aside class="bot" aria-label="CAERUS, mission companion">
+  <div class="bot__panel panel" id="bot-panel" hidden>
+    <div class="bot__log" id="bot-log" aria-live="polite"></div>
+    <form class="bot__row" id="bot-form">
+      <input type="text" id="bot-input" maxlength="280" placeholder="Ask CAERUS…" aria-label="Message CAERUS">
+      <button class="ctl" type="button" id="bot-mic" aria-pressed="false" aria-label="Talk with your voice">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      </button>
+      <button class="ctl" type="submit" aria-label="Send message">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m4 12 16-7-4 7 4 7-16-7z"/></svg>
+      </button>
+    </form>
+  </div>
+  <button class="bot__toggle" id="bot-toggle" aria-expanded="false" aria-label="Open CAERUS, the mission companion">
+    <canvas id="bot-canvas" width="168" height="168"></canvas>
+  </button>
+</aside>
+
+<svg id="ghost-hand" viewBox="0 0 24 24" fill="none" stroke="#59e8d5" stroke-width="1.1" aria-hidden="true">
+  <path d="M8 12V5.5a1.3 1.3 0 0 1 2.6 0V11m0-5.5V4a1.3 1.3 0 0 1 2.6 0v7m0-6a1.3 1.3 0 0 1 2.6 0v7.5m0-4.5a1.3 1.3 0 0 1 2.6 0V15a6.5 6.5 0 0 1-6.5 6.5h-.9A6 6 0 0 1 6 18l-2.2-3.6a1.4 1.4 0 0 1 2.3-1.6L8 15"/>
+</svg>
+
+<noscript>
+  <div class="noscript-box">
+    <h1>Flavio Giorgio Guarini</h1>
+    <p>Security · Sound · Systems. 22, Bari, Italy. Two degrees in parallel, TryHackMe top 3%, official Ableton beta tester.</p>
+    <p>This experience needs JavaScript. Reach me at guariniflavio@gmail.com or WhatsApp +39 349 544 6488.</p>
+  </div>
+</noscript>
+
 </body>
 </html>
