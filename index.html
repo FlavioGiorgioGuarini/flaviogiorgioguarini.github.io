@@ -10,8 +10,17 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://flaviogiorgioguarini.github.io/">
   <link rel="canonical" href="https://flaviogiorgioguarini.github.io/">
+  <meta name="theme-color" content="#060606">
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
   <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -25,7 +34,7 @@
     "knowsLanguage": ["it", "en", "es"],
     "sameAs": [
       "https://github.com/FlavioGiorgioGuarini",
-      "https://www.linkedin.com/in/FlavioGiorgioGuarini",
+      "https://www.linkedin.com/in/flavioguarini",
       "https://tryhackme.com/p/FlavioGiorgioGuarini"
     ]
   }
@@ -128,10 +137,10 @@
           <h3>Adhuna Collective</h3>
           <p data-i18n="work.p4.p">Founded and coordinated mindfulness-and-sound retreats, producing "The Methe Resort Experience" (May 2024).</p>
         </article>
-        <article class="card reveal">
-          <p class="card__tag mono" data-i18n="work.p5.tag">AUTOMATION · 2026</p>
-          <h3 data-i18n="work.p5.t">AI operations engine</h3>
-          <p data-i18n="work.p5.p">Designing a persistent-memory automation system for a two-site fitness business: AI-drafted reporting, structured knowledge base, customer-flow automation. Human judgment where it matters, machines everywhere else.</p>
+        <article class="card card--teaser reveal">
+          <p class="card__tag mono" data-i18n="work.p5.tag">IN THE LAB</p>
+          <h3 data-i18n="work.p5.t">Second Brain AI</h3>
+          <p data-i18n="work.p5.p">Coming soon.</p>
         </article>
       </div>
     </section>
@@ -184,7 +193,7 @@
       <a class="contact__mail magnetic" href="mailto:guariniflavio@gmail.com">guariniflavio@gmail.com</a>
       <div class="contact__socials mono">
         <a href="https://github.com/FlavioGiorgioGuarini" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://www.linkedin.com/in/FlavioGiorgioGuarini" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="https://www.linkedin.com/in/flavioguarini" target="_blank" rel="noopener">LinkedIn</a>
         <a href="https://tryhackme.com/p/FlavioGiorgioGuarini" target="_blank" rel="noopener">TryHackMe</a>
       </div>
     </section>
@@ -195,8 +204,21 @@
     <span data-i18n="footer.note">Built from my second brain. No trackers, no cookies.</span>
   </footer>
 
+  <!-- v2 — couture hand layer -->
+  <canvas id="hand-canvas" aria-hidden="true"></canvas>
+  <div class="hand-ui" id="hand-ui" hidden>
+    <button class="hand-ui__btn mono" id="hand-toggle" aria-pressed="false">
+      <span class="hand-ui__dot" aria-hidden="true"></span>
+      <span id="hand-toggle-label" data-i18n="hand.enable">Hand control</span>
+    </button>
+    <p class="hand-ui__privacy mono" data-i18n="hand.privacy">Camera runs on-device only. No video ever leaves this browser.</p>
+  </div>
+  <div class="hand-cursor" id="hand-cursor" aria-hidden="true" hidden></div>
+
   <script src="js/i18n.js" defer></script>
   <script src="js/hero3d.js" defer></script>
   <script src="js/main.js" defer></script>
+  <script src="js/hand3d.js" type="module"></script>
+  <script src="js/handtrack.js" defer></script>
 </body>
 </html>

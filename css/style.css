@@ -228,6 +228,59 @@ a { color: inherit; text-decoration: none; }
   border-top: 1px solid var(--line); color: var(--dim);
 }
 
+/* ——— v2: couture hand layer ——— */
+#hand-canvas {
+  position: fixed; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 40;
+  opacity: 0; transition: opacity 0.2s linear;
+}
+.hand-ui {
+  position: fixed; right: calc(18px + env(safe-area-inset-right));
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  z-index: 60; display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+}
+.hand-ui__btn {
+  display: flex; align-items: center; gap: 9px;
+  background: rgba(12, 12, 12, 0.82); backdrop-filter: blur(10px);
+  border: 1px solid var(--line); color: var(--ink);
+  padding: 10px 16px; border-radius: 99px; cursor: pointer;
+  font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.08em;
+  transition: border-color 0.25s, color 0.25s;
+}
+.hand-ui__btn:hover { border-color: var(--accent); }
+.hand-ui__dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--dim); transition: background 0.25s, box-shadow 0.25s;
+}
+.hand-ui--loading .hand-ui__dot { background: var(--accent); animation: pulse 0.9s ease-in-out infinite; }
+.hand-ui--on .hand-ui__dot { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+@keyframes pulse { 50% { opacity: 0.3; } }
+.hand-ui__privacy {
+  margin: 0; max-width: 240px; text-align: right;
+  color: var(--dim); font-size: 0.62rem; letter-spacing: 0.05em;
+  opacity: 0; transform: translateY(4px); transition: opacity 0.3s, transform 0.3s;
+  pointer-events: none;
+}
+.hand-ui:hover .hand-ui__privacy,
+.hand-ui--on .hand-ui__privacy,
+.hand-ui--loading .hand-ui__privacy { opacity: 1; transform: none; }
+
+.hand-cursor {
+  position: fixed; left: 0; top: 0; z-index: 70; pointer-events: none;
+  width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%;
+  border: 1.5px solid var(--accent);
+  background: rgba(255, 90, 31, 0.15);
+  transition: width 0.15s, height 0.15s, margin 0.15s, background 0.15s;
+}
+.hand-cursor--pinch {
+  width: 10px; height: 10px; margin: -5px 0 0 -5px;
+  background: var(--accent);
+}
+
+.card--teaser { border-style: dashed; }
+.card--teaser h3 { color: var(--dim); }
+.card--teaser h3::after { content: " ●"; color: var(--accent); font-size: 0.6em; vertical-align: middle; }
+
 /* reveal on scroll */
 .reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1); }
 .reveal.in { opacity: 1; transform: none; }
