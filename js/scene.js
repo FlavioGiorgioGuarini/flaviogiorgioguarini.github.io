@@ -59,9 +59,9 @@ export class DeepField {
   constructor(canvas, { reduced = false } = {}) {
     this.reduced = reduced;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
-    this.renderer.setClearColor(0x05060a, 1);
+    this.renderer.setClearColor(0x030408, 1);
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.FogExp2(0x05060a, 0.0085);
+    this.scene.fog = new THREE.FogExp2(0x030408, 0.0115);
     this.camera = new THREE.PerspectiveCamera(58, 1, 0.1, 600);
     this.camera.position.set(0, 0, 26);
     this.t = 0;
@@ -266,11 +266,16 @@ export class DeepField {
     this.starU.uLevel.value = calm ? 0 : level;
     if (this.dustU) { this.dustU.uTime.value = this.t; this.dustU.uBass.value = calm ? 0 : bass; }
 
-    // nebulae breathe with the mids, ember one with the bass
+    // nebulae idle near-black, then flare with the score: dynamic range is the luxury
     if (!calm) {
-      this.nebulae[0].material.opacity = 0.09 + mid * 0.16;
-      this.nebulae[1].material.opacity = 0.07 + bass * 0.18;
-      this.nebulae[2].material.opacity = 0.08 + level * 0.14;
+      this.nebulae[0].material.opacity = 0.055 + mid * 0.22;
+      this.nebulae[1].material.opacity = 0.045 + bass * 0.26;
+      this.nebulae[2].material.opacity = 0.05 + level * 0.18;
+      const fov = 58 + bass * 2.4;
+      if (Math.abs(fov - this.camera.fov) > 0.08) {
+        this.camera.fov = fov;
+        this.camera.updateProjectionMatrix();
+      }
     }
 
     // camera travels down the field with scroll, drifts on a slow figure

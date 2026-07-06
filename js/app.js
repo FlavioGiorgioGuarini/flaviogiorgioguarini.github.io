@@ -54,6 +54,7 @@ const soundCtl = $('#ctl-sound');
 function closeGate() {
   gate.style.transition = 'opacity 1.4s';
   gate.style.opacity = '0';
+  document.body.classList.add('loaded'); // hero shutter lines uncover
   setTimeout(() => { gate.hidden = true; }, 1400);
 }
 $('#enter-sound').addEventListener('click', async () => {
@@ -262,6 +263,58 @@ function makeOrbit(canvas) {
   };
 }
 
+/* ---------- cinema layer: grain, reveals, tilt, magnetism ---------- */
+const grain = document.createElement('canvas');
+grain.id = 'grain'; grain.width = 128; grain.height = 128;
+grain.setAttribute('aria-hidden', 'true');
+document.body.appendChild(grain);
+const gg = grain.getContext('2d');
+setInterval(() => {
+  if (reduced || document.hidden) return;
+  const d = gg.createImageData(128, 128), a = d.data;
+  for (let i = 0; i < a.length; i += 4) { a[i] = a[i + 1] = a[i + 2] = (Math.random() * 255) | 0; a[i + 3] = 36; }
+  gg.putImageData(d, 0, 0);
+}, 160);
+
+document.querySelectorAll(
+  '.display--section, .serif-line, .lead, .tl-item, .card, .channel, .stats, .game-frame, .orbit-wrap, .feature-scene, #ctf-form, .links-row'
+).forEach((el) => el.classList.add('reveal'));
+const rio = new IntersectionObserver((es) => es.forEach((en) => {
+  if (!en.isIntersecting) return;
+  const el = en.target;
+  const sibs = [...el.parentElement.children].filter((c) => c.classList.contains('reveal'));
+  el.style.transitionDelay = `${(Math.max(sibs.indexOf(el), 0) % 6) * 90}ms`;
+  el.classList.add('in');
+  el.addEventListener('transitionend', () => {
+    el.classList.remove('reveal', 'in');       // hand transforms back to hover states
+    el.style.transitionDelay = '';
+  }, { once: true });
+  rio.unobserve(el);
+}), { threshold: 0.18 });
+document.querySelectorAll('.reveal').forEach((el) => rio.observe(el));
+
+if (matchMedia('(pointer: fine)').matches && !reduced) {
+  document.querySelectorAll('.card, .channel').forEach((el) => {
+    el.addEventListener('pointermove', (e) => {
+      const r = el.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+      el.style.transform = `perspective(700px) rotateX(${(-y * 6).toFixed(2)}deg) rotateY(${(x * 8).toFixed(2)}deg) translateY(-3px)`;
+    });
+    el.addEventListener('pointerleave', () => { el.style.transform = ''; });
+  });
+  document.querySelectorAll('.btn').forEach((b) => {
+    b.addEventListener('pointermove', (e) => {
+      const r = b.getBoundingClientRect();
+      b.style.transform = `translate(${((e.clientX - r.left - r.width / 2) * 0.12).toFixed(1)}px, ${((e.clientY - r.top - r.height / 2) * 0.2).toFixed(1)}px)`;
+    });
+    b.addEventListener('pointerleave', () => { b.style.transform = ''; });
+  });
+}
+
+/* real portrait appears only when assets/img/portrait.jpg exists */
+const pimg = document.getElementById('portrait-img');
+pimg?.addEventListener('load', () => { document.getElementById('portrait').hidden = false; });
+
 /* ---------- robot companion (lazy) ---------- */
 $('#bot-toggle').addEventListener('click', async () => {
   if (!state.bot) {
@@ -305,6 +358,12 @@ function loop(now) {
   state.ghost.y += (state.ghost.ty - state.ghost.y) * 0.16;
   ghost.style.transform = `translate(${state.ghost.x}px, ${state.ghost.y}px)`;
   if (state.orbit && nearViewport('#systems')) state.orbit.frame(state.audio.mid);
+  const op = document.getElementById('operator');
+  if (op && !op.hidden && nearViewport('#operator')) {
+    const r = op.getBoundingClientRect();
+    op.firstElementChild.style.transform =
+      `scale(1.06) translateY(${((r.top + r.height / 2 - innerHeight / 2) * -0.045).toFixed(1)}px)`;
+  }
   if (state.bot) state.bot.frame(dt, state.audio.level);
   requestAnimationFrame(loop);
 }
