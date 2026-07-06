@@ -55,6 +55,22 @@
     lastY = y;
   }, { passive: true });
 
+  /* ——— timeline strip: drag-to-scroll (desktop) ——— */
+  var strip = document.getElementById("tstrip");
+  if (strip && window.matchMedia("(pointer: fine)").matches) {
+    var down = false, startX = 0, startScroll = 0;
+    strip.addEventListener("pointerdown", function (e) {
+      down = true; startX = e.clientX; startScroll = strip.scrollLeft;
+      strip.classList.add("tstrip--dragging");
+    });
+    window.addEventListener("pointermove", function (e) {
+      if (down) strip.scrollLeft = startScroll - (e.clientX - startX);
+    });
+    window.addEventListener("pointerup", function () {
+      down = false; strip.classList.remove("tstrip--dragging");
+    });
+  }
+
   /* ——— magnetic elements (desktop pointer only) ——— */
   var fine = window.matchMedia("(pointer: fine)").matches;
   var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;

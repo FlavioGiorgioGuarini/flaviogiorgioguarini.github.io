@@ -12,6 +12,9 @@
   <link rel="canonical" href="https://flaviogiorgioguarini.github.io/">
   <meta name="theme-color" content="#060606">
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <script type="importmap">
   {
@@ -148,14 +151,86 @@
     <!-- TIMELINE -->
     <section class="section" id="timeline">
       <p class="section__kicker mono"><span class="accent">04</span> <span data-i18n="tl.kicker">Timeline</span></p>
-      <ol class="timeline">
-        <li class="tl reveal"><span class="tl__date mono">2019</span><p data-i18n="tl.i1">Freelance sound design begins — official Ableton Live beta testing. Bronze medal, 200 m butterfly, Infantil Champs, Tenerife.</p></li>
-        <li class="tl reveal"><span class="tl__date mono">2023</span><p data-i18n="tl.i2">US-accredited diploma — The American School of Las Palmas, Gran Canaria. Founded Adhuna Collective; private English &amp; Spanish teaching.</p></li>
-        <li class="tl reveal"><span class="tl__date mono">2024</span><p data-i18n="tl.i3">Personal assistant to a high-profile confidential client, Rome — multilingual operations under strict discretion.</p></li>
-        <li class="tl reveal"><span class="tl__date mono">2025</span><p data-i18n="tl.i4">B.Sc. Communication &amp; Multimedia begins. VISIONOIR founded and strategically closed. Pivot to security: Python for security, TryHackMe grind, Advent of Cyber 2025.</p></li>
-        <li class="tl reveal"><span class="tl__date mono">2026</span><p data-i18n="tl.i5">B.Sc. Computer Engineering begins in parallel. Google AI certifications. Erasmus+ BIP at Universidad de León, selected with scholarship.</p></li>
-        <li class="tl reveal"><span class="tl__date mono">2027</span><p data-i18n="tl.i6">Target: double graduation.</p></li>
-      </ol>
+      <div class="tstrip" id="tstrip" tabindex="0" aria-label="Career timeline, horizontally scrollable">
+        <article class="tnode reveal">
+          <svg class="tnode__vig" viewBox="0 0 200 90" aria-hidden="true">
+            <g stroke="#ff5a1f" stroke-width="2" opacity="0.9">
+              <line x1="20" y1="70" x2="20" y2="48"/><line x1="34" y1="70" x2="34" y2="30"/><line x1="48" y1="70" x2="48" y2="55"/><line x1="62" y1="70" x2="62" y2="22"/><line x1="76" y1="70" x2="76" y2="42"/><line x1="90" y1="70" x2="90" y2="58"/>
+            </g>
+            <path d="M110 70 Q 130 20 190 34" fill="none" stroke="#2fd8e6" stroke-width="1" opacity="0.45"/>
+            <line x1="10" y1="70" x2="190" y2="70" stroke="#f5f5f0" stroke-width="0.6" opacity="0.35"/>
+          </svg>
+          <span class="tnode__year mono">2019</span>
+          <h3 data-i18n="tl.t1">Sound ignition</h3>
+          <p data-i18n="tl.i1">Freelance sound design begins — official Ableton Live beta testing. Bronze medal, 200 m butterfly, Infantil Champs, Tenerife.</p>
+        </article>
+        <article class="tnode reveal">
+          <svg class="tnode__vig" viewBox="0 0 200 90" aria-hidden="true">
+            <circle cx="150" cy="52" r="16" fill="none" stroke="#ff5a1f" stroke-width="2"/>
+            <line x1="10" y1="60" x2="190" y2="60" stroke="#f5f5f0" stroke-width="0.6" opacity="0.4"/>
+            <line x1="10" y1="66" x2="190" y2="66" stroke="#f5f5f0" stroke-width="0.4" opacity="0.25"/>
+            <path d="M30 60 L38 34 M38 34 L46 60 M34 48 h8" stroke="#f5f5f0" stroke-width="1.4" fill="none" opacity="0.8"/>
+            <path d="M58 34 v26 M58 34 h10 q6 3 0 8 h-10 M58 47 h10 q7 4 0 13" stroke="#2fd8e6" stroke-width="1.2" fill="none" opacity="0.5"/>
+          </svg>
+          <span class="tnode__year mono">2023</span>
+          <h3 data-i18n="tl.t2">Island diploma</h3>
+          <p data-i18n="tl.i2">US-accredited diploma — The American School of Las Palmas, Gran Canaria. Founded Adhuna Collective; private English &amp; Spanish teaching.</p>
+        </article>
+        <article class="tnode reveal">
+          <svg class="tnode__vig" viewBox="0 0 200 90" aria-hidden="true">
+            <g stroke="#f5f5f0" stroke-width="0.7" opacity="0.4">
+              <line x1="10" y1="14" x2="100" y2="45"/><line x1="10" y1="76" x2="100" y2="45"/>
+              <line x1="190" y1="14" x2="100" y2="45"/><line x1="190" y1="76" x2="100" y2="45"/>
+            </g>
+            <g fill="#ff5a1f" opacity="0.85">
+              <rect x="60" y="38" width="34" height="5" rx="2"/><rect x="104" y="46" width="26" height="5" rx="2"/>
+            </g>
+            <rect x="82" y="24" width="36" height="5" rx="2" fill="#f5f5f0" opacity="0.5"/>
+          </svg>
+          <span class="tnode__year mono">2024</span>
+          <h3 data-i18n="tl.t3">Rome, discretion</h3>
+          <p data-i18n="tl.i3">Personal assistant to a high-profile confidential client, Rome — multilingual operations under strict discretion.</p>
+        </article>
+        <article class="tnode reveal">
+          <svg class="tnode__vig" viewBox="0 0 200 90" aria-hidden="true">
+            <g fill="#0c0c0c" stroke="#f5f5f0" stroke-width="0.7" opacity="0.7">
+              <rect x="18" y="40" width="16" height="34"/><rect x="42" y="26" width="16" height="48"/><rect x="66" y="48" width="16" height="26"/><rect x="90" y="18" width="16" height="56"/>
+            </g>
+            <g stroke="#ff5a1f" stroke-width="1.2" stroke-dasharray="3 5" opacity="0.9">
+              <line x1="130" y1="8" x2="130" y2="74"/><line x1="146" y1="16" x2="146" y2="74"/><line x1="162" y1="4" x2="162" y2="74"/>
+            </g>
+            <path d="M20 84 Q 100 76 180 84" fill="none" stroke="#2fd8e6" stroke-width="1" opacity="0.45"/>
+          </svg>
+          <span class="tnode__year mono">2025</span>
+          <h3 data-i18n="tl.t4">Security pivot</h3>
+          <p data-i18n="tl.i4">B.Sc. Communication &amp; Multimedia begins. VISIONOIR founded and strategically closed. Pivot to security: Python for security, TryHackMe grind, Advent of Cyber 2025.</p>
+        </article>
+        <article class="tnode reveal">
+          <svg class="tnode__vig" viewBox="0 0 200 90" aria-hidden="true">
+            <g stroke="#f5f5f0" stroke-width="0.5" opacity="0.3">
+              <path d="M10 20 h180 M10 38 h180 M10 56 h180 M10 74 h180"/>
+              <path d="M40 8 v74 M90 8 v74 M140 8 v74"/>
+            </g>
+            <path d="M10 30 C 70 30 130 62 190 62" fill="none" stroke="#ff5a1f" stroke-width="2"/>
+            <path d="M10 64 C 70 64 130 32 190 32" fill="none" stroke="#ff5a1f" stroke-width="2" opacity="0.6"/>
+          </svg>
+          <span class="tnode__year mono">2026</span>
+          <h3 data-i18n="tl.t5">Parallel tracks</h3>
+          <p data-i18n="tl.i5">B.Sc. Computer Engineering begins in parallel. Google AI certifications. Erasmus+ BIP at Universidad de León, selected with scholarship.</p>
+        </article>
+        <article class="tnode reveal">
+          <svg class="tnode__vig" viewBox="0 0 200 90" aria-hidden="true">
+            <path d="M10 20 C 90 20 120 45 168 45 M10 70 C 90 70 120 45 168 45" fill="none" stroke="#f5f5f0" stroke-width="1" opacity="0.6"/>
+            <circle cx="168" cy="45" r="5" fill="#ff5a1f"/>
+            <circle cx="168" cy="45" r="12" fill="none" stroke="#ff5a1f" stroke-width="0.8" opacity="0.5"/>
+            <circle cx="168" cy="45" r="20" fill="none" stroke="#2fd8e6" stroke-width="0.6" opacity="0.3"/>
+          </svg>
+          <span class="tnode__year mono">2027</span>
+          <h3 data-i18n="tl.t6">Convergence</h3>
+          <p data-i18n="tl.i6">Target: double graduation.</p>
+        </article>
+      </div>
+      <p class="tstrip__hint mono" data-i18n="tl.hint">drag · scroll · or swipe with your hand</p>
     </section>
 
     <!-- CREDENTIALS -->

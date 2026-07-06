@@ -26,6 +26,8 @@
   var stream = null, landmarker = null, video = null, raf = 0;
   var lastVideoTime = -1, pinched = false, lastClick = 0;
   var cx = innerWidth / 2, cy = innerHeight / 2;
+  var strip = document.getElementById("tstrip");
+  var prevWX = null, lastSwipe = 0;
 
   function t(key, fallback) {
     var lang = document.documentElement.lang || "en";
@@ -100,6 +102,20 @@
           }
         }
         pinched = isPinch;
+
+        /* open-palm horizontal swipe → move the timeline strip (900 ms cooldown) */
+        var openPalm = curls[0] < 0.35 && curls[1] < 0.35 && curls[2] < 0.4 && curls[3] < 0.4;
+        if (strip && openPalm && prevWX !== null) {
+          var dxw = nx - prevWX;
+          if (Math.abs(dxw) > 0.045 && performance.now() - lastSwipe > 900) {
+            lastSwipe = performance.now();
+            strip.scrollBy({ left: dxw > 0 ? 360 : -360, behavior: "smooth" });
+            if (window.HAND3D) window.HAND3D.pulse();
+          }
+        }
+        prevWX = nx;
+      } else {
+        prevWX = null;
       }
     }
     raf = requestAnimationFrame(loop);
