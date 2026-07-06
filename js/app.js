@@ -1,19 +1,28 @@
-/* Mission control: language, audio, scene, hand, and lazy modules. */
+/* Mission control: language, audio, scene, hand, ocean mode, and lazy
+   modules. Quality tier is decided at boot; a runtime governor may step
+   quality down but never breaks features — every capability degrades to
+   the pointer + keyboard + touch baseline. */
 
 import { age, STAT_NUMS, SKILL_GEO, PROJECT_LINKS, CONTACT } from './data.js';
 import { I18N, LOCALES, VOICE, t, lang, setLang } from './i18n.js';
 import { AudioEngine } from './audio.js';
+import { detectQuality, Governor } from './quality.js';
+import { createGyro } from './sensors.js';
 
 const $ = (s) => document.querySelector(s);
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const Q = detectQuality();
 
 const state = {
-  px: 0, py: 0,
+  px: 0, py: 0,               // pointer parallax
+  gx: 0, gy: 0,               // gyro parallax (smoothed here)
   hand: null, handLive: false,
   scene: null, vision: null, bot: null, game: null, orbit: null,
+  dwell: null, faceField: null, faceLoading: false,
   audio: new AudioEngine('assets/audio/dns-1.m4a'),
   ghost: { x: innerWidth / 2, y: innerHeight / 2, tx: innerWidth / 2, ty: innerHeight / 2 },
 };
+const gyro = createGyro();
 
 /* ---------- language ---------- */
 const langSel = $('#lang');
@@ -96,6 +105,7 @@ function closeGate() {
   gate.style.transition = 'opacity 1.4s';
   gate.style.opacity = '0';
   document.body.classList.add('loaded');
+  gyro.enable();  // user gesture: iOS grants or silently declines
   setTimeout(() => { gate.hidden = true; }, 1400);
 }
 $('#enter-sound').addEventListener('click', async () => {
@@ -114,6 +124,22 @@ soundCtl.addEventListener('click', async () => {
   const muted = state.audio.toggleMute();
   soundCtl.setAttribute('aria-pressed', String(!muted));
 });
+
+/* ---------- ocean mode: dive button + shaka gesture share one path ---------- */
+const diveCtl = $('#ctl-dive');
+function toggleOcean() {
+  if (!state.scene) return;
+  const next = state.scene.toggleMode();
+  if (!next) return; // transition already running
+  const ocean = next === 'ocean';
+  diveCtl.setAttribute('aria-pressed', String(ocean));
+  // the CSS skin and the score dive at the foam peak, not at click time
+  setTimeout(() => {
+    document.body.classList.toggle('ocean', ocean);
+    state.audio.setUnderwater(ocean);
+  }, reduced ? 200 : 1150);
+}
+diveCtl.addEventListener('click', toggleOcean);
 
 /* ---------- pointer + ghost hand ---------- */
 const ghost = $('#ghost-hand');
@@ -135,6 +161,8 @@ camCtl.addEventListener('click', () => {
     state.vision.stop();
     state.vision = null;
     state.handLive = false;
+    state.dwell?.hide();
+    state.faceField?.setFace(null);
     camCtl.setAttribute('aria-pressed', 'false');
     $('#moon-telemetry').textContent = t('ui.handOff');
     return;
@@ -149,8 +177,14 @@ $('#cam-enable').addEventListener('click', async () => {
     const mod = await import('./vision.js');
     state.vision = await mod.startVision({
       onHand,
+      onFace,
+      face: Q.face,
       onStatus: (msg) => { $('#game-status').textContent = msg; },
     });
+    if (!state.dwell) {
+      const dm = await import('./dwell.js');
+      state.dwell = dm.createDwell();
+    }
     camCtl.setAttribute('aria-pressed', 'true');
     ghost.classList.remove('on');
     $('#moon-telemetry').textContent = t('ui.handOn');
@@ -162,18 +196,29 @@ $('#cam-enable').addEventListener('click', async () => {
   }
 });
 
-/* VR-style gestures: open hand mirrors only; fist flies; two secrets. */
+/* VR-style gestures. Open hand mirrors; fist flies; point dwells to click;
+   shaka dives the site; two secrets stay secret. */
 const SECTIONS = [...document.querySelectorAll('main .section')];
-let lastJump = 0, lastHorns = 0, lastMiddle = 0;
+let lastJump = 0, lastHorns = 0, lastMiddle = 0, lastShaka = 0, lastPoke = 0;
 const sarcasm = $('#sarcasm');
 $('#sarcasm-close').addEventListener('click', () => { sarcasm.hidden = true; });
 
 function onHand(h) {
   state.handLive = !!h;
-  if (!h) return;
+  if (!h) { state.dwell?.update(null); return; }
   state.hand?.setPose(h);
   const now = performance.now();
-  if (h.gesture === 'horns' && now - lastHorns > 6000) {
+
+  if (h.gesture === 'point') {
+    state.dwell?.update({ x: h.tip.x * innerWidth, y: h.tip.y * innerHeight }, now);
+  } else {
+    state.dwell?.update(null);
+  }
+
+  if (h.gesture === 'shaka' && now - lastShaka > 8000) {
+    lastShaka = now;
+    toggleOcean();
+  } else if (h.gesture === 'horns' && now - lastHorns > 6000) {
     lastHorns = now;
     state.scene?.triggerWarp();
   } else if (h.gesture === 'middle' && now - lastMiddle > 15000 && sarcasm.hidden) {
@@ -183,7 +228,30 @@ function onHand(h) {
     if (Math.abs(h.dy) > 0.1) scrollBy({ top: h.dy * innerHeight * 0.14, behavior: 'instant' });
     if (Math.abs(h.dx) > 1.0 && now - lastJump > 900) { lastJump = now; jumpSection(h.dx > 0 ? 1 : -1); }
   }
+
+  // underwater, the hand rows the water
+  if (state.scene && state.scene.mix > 0.05) {
+    state.scene.setHand(h.x, h.y, h.speed);
+    if (h.speed > 0.5 && now - lastPoke > 130) {
+      lastPoke = now;
+      state.scene.pokeWater(h.x, h.y, Math.min(0.25 + h.speed * 0.3, 1.1));
+    }
+  }
 }
+
+function onFace(f) {
+  if (!Q.face || !state.scene) return;
+  if (f && !state.faceField && !state.faceLoading) {
+    state.faceLoading = true;
+    import('./facefield.js').then((m) => {
+      state.faceField = m.createFaceField(state.scene);
+      state.faceField.setFace(f);
+    });
+    return;
+  }
+  state.faceField?.setFace(f);
+}
+
 function currentSection() {
   const y = scrollY + innerHeight / 2;
   return Math.max(0, SECTIONS.findLastIndex((s) => s.offsetTop <= y));
@@ -308,12 +376,15 @@ grain.id = 'grain'; grain.width = 128; grain.height = 128;
 grain.setAttribute('aria-hidden', 'true');
 document.body.appendChild(grain);
 const gg = grain.getContext('2d');
-setInterval(() => {
+let grainMs = Q.grainMs;
+function grainTick() {
+  setTimeout(grainTick, grainMs);
   if (reduced || document.hidden) return;
   const d = gg.createImageData(128, 128), a = d.data;
   for (let i = 0; i < a.length; i += 4) { a[i] = a[i + 1] = a[i + 2] = (Math.random() * 255) | 0; a[i + 3] = 36; }
   gg.putImageData(d, 0, 0);
-}, 160);
+}
+grainTick();
 
 document.querySelectorAll(
   '.display--section, .serif-line, .lead, .card, .channel, .stats, .game-frame, .orbit-wrap, #ctf-form, .links-row'
@@ -366,11 +437,34 @@ import('./bot.js').then((m) => { if (!state.bot) state.bot = m.startBot({ canvas
 
 /* ---------- scene + cockpit hand + main loop ---------- */
 import('./scene.js').then(async ({ DeepField }) => {
-  state.scene = new DeepField($('#stage'), { reduced });
-  addEventListener('resize', () => state.scene.resize(), { passive: true });
+  state.scene = new DeepField($('#stage'), { reduced, quality: Q });
   const { Hand3D } = await import('./hand3d.js');
   state.hand = new Hand3D(state.scene.camera);
   state.scene.scene.add(state.scene.camera);
+});
+
+/* resize guard: mobile URL-bar collapse fires resize with same width —
+   re-laying the GL canvas for that just causes a visible hitch */
+let lastW = innerWidth, lastH = innerHeight;
+function onResize() {
+  if (!state.scene) return;
+  if (innerWidth === lastW && Math.abs(innerHeight - lastH) < 130) return;
+  lastW = innerWidth; lastH = innerHeight;
+  state.scene.resize();
+}
+addEventListener('resize', onResize, { passive: true });
+addEventListener('orientationchange', () => {
+  lastW = -1;
+  setTimeout(onResize, 220);
+}, { passive: true });
+
+/* ---------- fps governor: steps down, never up ---------- */
+const governor = new Governor((step) => {
+  if (!state.scene) return;
+  if (step === 1) state.scene.setDprCap(Math.max(1, Q.dprCap - 0.3));
+  if (step === 2) state.scene.setDust(false);
+  if (step === 3) { state.vision?.setFace(false); state.faceField?.setEnabled(false); }
+  if (step === 4) { state.scene.setStarFrac(0.55); grainMs = 400; }
 });
 
 const docH = () => document.documentElement.scrollHeight - innerHeight;
@@ -379,19 +473,30 @@ function loop(now) {
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
   state.audio.frame();
+
+  // gyro folds into the same parallax bus as the pointer
+  const g = gyro.target();
+  state.gx += (g.x - state.gx) * 0.08;
+  state.gy += (g.y - state.gy) * 0.08;
+  const px = Math.max(-1.2, Math.min(1.2, state.px + state.gx * 0.8));
+  const py = Math.max(-1.2, Math.min(1.2, state.py + state.gy * 0.6));
+
   if (state.scene) {
     state.scene.setScroll(docH() > 0 ? scrollY / docH() : 0);
-    state.scene.frame(dt, state.audio, { px: state.px, py: state.py });
+    state.scene.frame(dt, state.audio, { px, py, cur: { x: state.gx, y: state.gy } });
+    state.hand?.setMode(state.scene.mix);
   }
   if (state.hand) {
-    if (!state.handLive) state.hand.setIdle(now / 1000, state.px, state.py);
+    if (!state.handLive) state.hand.setIdle(now / 1000, px, py);
     state.hand.update(dt, state.audio.level);
   }
+  state.faceField?.frame(dt, state.audio.mid, state.scene ? state.scene.mix : 0);
   state.ghost.x += (state.ghost.tx - state.ghost.x) * 0.16;
   state.ghost.y += (state.ghost.ty - state.ghost.y) * 0.16;
   ghost.style.transform = `translate(${state.ghost.x}px, ${state.ghost.y}px)`;
   if (state.orbit && nearViewport('#systems')) state.orbit.frame(state.audio.mid);
   if (state.bot) state.bot.frame(dt, state.audio.level);
+  governor.tick(dt);
   requestAnimationFrame(loop);
 }
 function nearViewport(sel) {
@@ -399,3 +504,6 @@ function nearViewport(sel) {
   return r.bottom > -100 && r.top < innerHeight + 100;
 }
 requestAnimationFrame(loop);
+
+/* QA hook (harmless in production): lets tests drive the mode switch */
+window.__fgg = { state, toggleOcean, quality: Q };

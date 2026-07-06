@@ -16,6 +16,8 @@ export class AudioEngine {
     this.bins = null;
     this.playing = false;
     this.muted = sessionStorage.getItem(STORE_KEY) === 'muted';
+    this.filter = null;
+    this._uw = false;   // underwater requested before ctx exists
     // smoothed reactive bus, read by the scene every frame
     this.bass = 0; this.mid = 0; this.treble = 0; this.level = 0;
 
@@ -37,7 +39,12 @@ export class AudioEngine {
       this.bins = new Uint8Array(this.analyser.frequencyBinCount);
       this.gain = this.ctx.createGain();
       this.gain.gain.value = 0;
-      src.connect(this.analyser).connect(this.gain).connect(this.ctx.destination);
+      // analyser taps the full band so visuals stay honest underwater
+      this.filter = this.ctx.createBiquadFilter();
+      this.filter.type = 'lowpass';
+      this.filter.frequency.value = this._uw ? 760 : 19500;
+      this.filter.Q.value = 0.72;
+      src.connect(this.analyser).connect(this.filter).connect(this.gain).connect(this.ctx.destination);
     }
     await this.ctx.resume();
     try { await this.el.play(); } catch { return false; }
@@ -51,6 +58,15 @@ export class AudioEngine {
     await this._ramp(0, fadeSec);
     this.el.pause();
     this.playing = false;
+  }
+
+  /* ocean mode: the score sinks with the site (gentle lowpass dive) */
+  setUnderwater(on) {
+    this._uw = on;
+    if (!this.filter) return;
+    const f = this.filter.frequency, t = this.ctx.currentTime;
+    f.cancelScheduledValues(t);
+    f.setTargetAtTime(on ? 760 : 19500, t, 0.4);
   }
 
   toggleMute() {

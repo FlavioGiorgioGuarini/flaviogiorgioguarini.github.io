@@ -66,6 +66,26 @@
   --t-slow: 900ms;
 }
 
+/* ---------- Ocean skin ----------
+   The shaka (or the wave button) submerges the whole site: the 3D scene
+   crossfades in JS; these tokens re-tint every panel, line and accent.
+   Same layout, same functions — only the world changes. */
+body.ocean {
+  --bg-space: #041016;
+  --bg-panel: #07171e;
+  --bg-panel-2: #0a2028;
+
+  --ink-body: #bfcccc;
+  --ink-dim: #8fa4a4;
+  --ink-faint: #6d8383;
+
+  --ember: #9fc6cf;
+  --ember-dim: rgba(159, 198, 207, 0.6);
+
+  --line: rgba(200, 235, 235, 0.10);
+  --line-strong: rgba(200, 235, 235, 0.22);
+}
+
 /* ---------- Reset / base ---------- */
 *, *::before, *::after { box-sizing: border-box; }
 html { scroll-behavior: smooth; overflow-x: clip; }
@@ -78,6 +98,7 @@ body {
   line-height: 1.72;
   -webkit-font-smoothing: antialiased;
   overflow-x: clip;
+  transition: background-color 1.4s var(--ease-cine), color 1.4s var(--ease-cine);
 }
 img, canvas, video { max-width: 100%; display: block; }
 a { color: var(--teal); text-decoration: none; }
@@ -452,6 +473,8 @@ body.loaded .hl + .hl { transition-delay: 0.18s; }
 .msg { max-width: 88%; padding: 10px 14px; font-size: 0.92rem; line-height: 1.55; }
 .msg--bot { background: rgba(89, 232, 213, 0.07); border-left: 2px solid var(--teal-deep); color: var(--ink-body); }
 .msg--user { background: rgba(233, 236, 234, 0.06); align-self: flex-end; color: var(--ink); }
+.msg--wait { color: var(--teal); letter-spacing: 0.3em; animation: wait-pulse 1.1s ease-in-out infinite; }
+@keyframes wait-pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
 .bot__row { display: flex; gap: 8px; padding: 14px; border-top: 1px solid var(--line); }
 .bot__row input { flex: 1; min-width: 0; }
 
@@ -479,6 +502,53 @@ body.loaded .hl + .hl { transition-delay: 0.18s; }
   filter: drop-shadow(0 0 10px var(--teal-glow));
 }
 #ghost-hand.on { opacity: 0.5; }
+
+/* ---------- Dwell cursor: point the index, hold 3s, the ring fires ---------- */
+#hand-cursor {
+  position: fixed; top: 0; left: 0; z-index: 95;
+  width: 44px; height: 44px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 260ms;
+  will-change: transform;
+}
+#hand-cursor.on { opacity: 1; }
+#hand-cursor svg {
+  position: absolute; inset: 0;
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+#hand-cursor circle { fill: none; }
+#hand-cursor .dwell-track {
+  stroke: rgba(233, 236, 234, 0.18);
+  stroke-width: 1.5;
+  opacity: 0;
+  transition: opacity 200ms;
+}
+#hand-cursor .dwell-ring {
+  stroke: var(--teal);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 6px var(--teal-glow));
+}
+#hand-cursor .dwell-dot {
+  position: absolute; left: 50%; top: 50%;
+  width: 7px; height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+  border-radius: 50%;
+  background: var(--teal-bright);
+  box-shadow: 0 0 12px 2px var(--teal-glow);
+}
+#hand-cursor.locked .dwell-track { opacity: 1; }
+#hand-cursor.locked .dwell-dot { background: #fff; }
+#hand-cursor.fired .dwell-dot {
+  animation: dwell-pop 480ms var(--ease-cine);
+}
+@keyframes dwell-pop {
+  0% { transform: scale(1); box-shadow: 0 0 12px 2px var(--teal-glow); }
+  40% { transform: scale(3.2); box-shadow: 0 0 34px 10px var(--teal-glow); }
+  100% { transform: scale(1); }
+}
 
 /* ---------- Utility rows ---------- */
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
@@ -640,6 +710,11 @@ body.loaded .hl + .hl { transition-delay: 0.18s; }
   .hero-grid { grid-template-columns: 1fr; gap: 8px; }
   .sticky-head { position: static; }
   .section { padding-top: 96px; padding-bottom: 96px; }
+}
+@media (max-width: 560px) {
+  .rail { right: 6px; gap: 14px; }
+  .section { padding-right: 30px; }
+  .topbar__controls { gap: 7px; }
 }
 
 /* ---------- Reduced motion ---------- */

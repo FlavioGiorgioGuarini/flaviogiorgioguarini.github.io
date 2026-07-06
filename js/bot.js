@@ -1,10 +1,14 @@
 /* CAERUS: mission companion. Original slab-monolith design (four floating
-   segments), voice in and out via the Web Speech API, knowledge fully
-   on-device from data.js. No network calls, ever (BOT.endpoint reserved). */
+   segments), voice in and out via the Web Speech API. Two brains:
+   - on-device intent engine (always available, zero network) and
+   - optional grounded LLM (ai-config.js key) locked to the public KB.
+   The LLM path degrades to the local answer on any error or timeout. */
 
 import * as THREE from '../vendor/three/three.module.min.js';
 import { age } from './data.js';
 import { I18N, BOT_KEYS, VOICE, t, lang } from './i18n.js';
+import { AI } from './ai-config.js';
+import { kbText } from './kb.js';
 
 export function startBot({ canvas }) {
   /* ---------- the little monolith ---------- */
@@ -59,7 +63,8 @@ export function startBot({ canvas }) {
   }
 
   function answer(text) {
-    const q = text.toLowerCase();
+    // accent-fold so "perché studia" matches "perche" keywords and vice versa
+    const q = text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
     const L = (I18N[lang] ?? I18N.en).bot;
     let best = null, bestScore = 0;
     for (const [intent, keys] of Object.entries(BOT_KEYS)) {
@@ -68,6 +73,32 @@ export function startBot({ canvas }) {
     }
     if (!best) return L.fallback[Math.floor(Math.random() * L.fallback.length)];
     return L.a[best].replace('{age}', age());
+  }
+
+  /* grounded LLM path: public KB as system prompt, short history, 12s cap */
+  const history = [];
+  async function askLLM(q) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 12000);
+    try {
+      const res = await fetch(`${AI.endpoint}${AI.model}:generateContent?key=${AI.key}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: ctl.signal,
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: kbText() + `\nCurrent site language: ${lang}.` }] },
+          contents: [...history, { role: 'user', parts: [{ text: q }] }],
+          generationConfig: { temperature: AI.temperature, maxOutputTokens: AI.maxTokens },
+        }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      const data = await res.json();
+      const out = data.candidates?.[0]?.content?.parts?.map((p) => p.text).join('').trim();
+      if (!out) throw new Error('empty');
+      history.push({ role: 'user', parts: [{ text: q }] }, { role: 'model', parts: [{ text: out }] });
+      if (history.length > 8) history.splice(0, history.length - 8);
+      return out;
+    } finally { clearTimeout(timer); }
   }
 
   function speak(text) {
@@ -80,17 +111,32 @@ export function startBot({ canvas }) {
     speechSynthesis.speak(u);
   }
 
-  function send(text, { voice = false } = {}) {
+  function deliver(a, voice) {
+    addMsg(a, 'bot');
+    talking = 1; setTimeout(() => { if (!speechSynthesis?.speaking) talking = 0; }, 1400);
+    if (voice) speak(a);
+  }
+
+  async function send(text, { voice = false } = {}) {
     const clean = text.trim().slice(0, 280);
     if (!clean) return;
     lastVoice = voice;
     addMsg(clean, 'user');
-    const a = answer(clean);
-    setTimeout(() => {
-      addMsg(a, 'bot');
-      talking = 1; setTimeout(() => { if (!speechSynthesis?.speaking) talking = 0; }, 1400);
-      if (voice) speak(a);
-    }, 260);
+    if (!AI.key) {
+      const a = answer(clean);
+      setTimeout(() => deliver(a, voice), 260);
+      return;
+    }
+    const wait = document.createElement('div');
+    wait.className = 'msg msg--bot msg--wait';
+    wait.textContent = '· · ·';
+    log.appendChild(wait);
+    log.scrollTop = log.scrollHeight;
+    listening = false; talking = 1;
+    let a;
+    try { a = await askLLM(clean); } catch { a = answer(clean); }
+    wait.remove();
+    deliver(a, voice);
   }
 
   form.addEventListener('submit', (e) => {
