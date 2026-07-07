@@ -3,7 +3,10 @@
    mutating hex digits deep behind the content. Atmospheric presence, not
    surveillance aesthetics: low opacity, heavy smoothing, long fades.
    The glyphs live in a 4x4 canvas atlas; each point cycles its digit on
-   its own clock. Nothing here ever touches the network. */
+   its own clock. v8 adds the structural read: face oval, lips and eyes
+   as hair-thin additive contour lines riding the same smoothed points —
+   more precise, still a presence, never surveillance UI.
+   Nothing here ever touches the network. */
 
 import * as THREE from '../vendor/three/three.module.min.js';
 
@@ -11,6 +14,27 @@ const N = 478;
 const COPIES = 2;                 // second jittered copy for density
 const W = 30, H = 34, Z = 26;     // face extent in world units
 const GLYPHS = '0123456789ABCDEF';
+
+/* MediaPipe FaceMesh structural contours: oval, lips, both eyes */
+const CONTOURS = [
+  // face oval
+  [10, 338], [338, 297], [297, 332], [332, 284], [284, 251], [251, 389], [389, 356],
+  [356, 454], [454, 323], [323, 361], [361, 288], [288, 397], [397, 365], [365, 379],
+  [379, 378], [378, 400], [400, 377], [377, 152], [152, 148], [148, 176], [176, 149],
+  [149, 150], [150, 136], [136, 172], [172, 58], [58, 132], [132, 93], [93, 234],
+  [234, 127], [127, 162], [162, 21], [21, 54], [54, 103], [103, 67], [67, 109], [109, 10],
+  // lips (outer)
+  [61, 146], [146, 91], [91, 181], [181, 84], [84, 17], [17, 314], [314, 405],
+  [405, 321], [321, 375], [375, 291],
+  [61, 185], [185, 40], [40, 39], [39, 37], [37, 0], [0, 267], [267, 269],
+  [269, 270], [270, 409], [409, 291],
+  // left eye
+  [33, 7], [7, 163], [163, 144], [144, 145], [145, 153], [153, 154], [154, 155], [155, 133],
+  [133, 173], [173, 157], [157, 158], [158, 159], [159, 160], [160, 161], [161, 246], [246, 33],
+  // right eye
+  [263, 249], [249, 390], [390, 373], [373, 374], [374, 380], [380, 381], [381, 382], [382, 362],
+  [362, 398], [398, 384], [384, 385], [385, 386], [386, 387], [387, 388], [388, 466], [466, 263],
+];
 
 function glyphAtlas() {
   const c = document.createElement('canvas');
@@ -94,6 +118,19 @@ export function createFaceField(deep) {
   group.add(points);
   deep.scene.add(group);
 
+  /* structural contour lines share the eased point positions */
+  const linePos = new Float32Array(CONTOURS.length * 6);
+  const lineGeo = new THREE.BufferGeometry();
+  lineGeo.setAttribute('position', new THREE.BufferAttribute(linePos, 3));
+  lineGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 60);
+  const lineMat = new THREE.LineBasicMaterial({
+    color: 0x59e8d5, transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  });
+  const lines = new THREE.LineSegments(lineGeo, lineMat);
+  lines.frustumCulled = false;
+  group.add(lines);
+
   let fadeTarget = 0, enabled = true, seen = false;
   const anchor = new THREE.Vector3();
 
@@ -133,7 +170,16 @@ export function createFaceField(deep) {
         const k = Math.min(dt * 7, 1);
         for (let i = 0; i < p.length; i++) p[i] += (targets[i] - p[i]) * k;
         geo.attributes.position.needsUpdate = true;
+        // contours ride the first (tight-jitter) copy of the points
+        for (let s = 0; s < CONTOURS.length; s++) {
+          const [a, b] = CONTOURS[s];
+          const o = s * 6;
+          linePos[o] = p[a * 3];     linePos[o + 1] = p[a * 3 + 1]; linePos[o + 2] = p[a * 3 + 2];
+          linePos[o + 3] = p[b * 3]; linePos[o + 4] = p[b * 3 + 1]; linePos[o + 5] = p[b * 3 + 2];
+        }
+        lineGeo.attributes.position.needsUpdate = true;
       }
+      lineMat.opacity = op * 0.16 * (0.8 + mid * 0.5);
     },
   };
 }

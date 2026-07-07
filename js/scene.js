@@ -628,9 +628,33 @@ export class DeepField {
   /* dark-steel patrol submarine; replaces the moon underwater */
   _buildSubmarine() {
     const g = new THREE.Group();
+    /* anechoic tile pattern: a quiet bump grid with a few missing tiles,
+       the detail that makes a hull read as engineered instead of extruded */
+    const tiles = (() => {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 128;
+      const tg = c.getContext('2d');
+      tg.fillStyle = '#8a8a8a';
+      tg.fillRect(0, 0, 256, 128);
+      tg.strokeStyle = '#6f6f6f';
+      tg.lineWidth = 2;
+      for (let x = 0; x <= 256; x += 16) { tg.beginPath(); tg.moveTo(x, 0); tg.lineTo(x, 128); tg.stroke(); }
+      for (let y = 0; y <= 128; y += 13) { tg.beginPath(); tg.moveTo(0, y); tg.lineTo(256, y); tg.stroke(); }
+      let s = 5;
+      const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+      for (let i = 0; i < 14; i++) {
+        tg.fillStyle = rnd() > 0.5 ? '#7a7a7a' : '#979797';
+        tg.fillRect((rnd() * 16 | 0) * 16 + 2, (rnd() * 9 | 0) * 13 + 2, 12, 9);
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(3, 1);
+      return tex;
+    })();
     const hullMat = new THREE.MeshPhysicalMaterial({
       color: 0x222a31, metalness: 0.85, roughness: 0.38,
       clearcoat: 0.3, clearcoatRoughness: 0.3,
+      bumpMap: tiles, bumpScale: 0.6,
     });
     const darkMat = new THREE.MeshStandardMaterial({ color: 0x171d22, metalness: 0.7, roughness: 0.5 });
     const warmGlow = new THREE.MeshStandardMaterial({
@@ -694,6 +718,23 @@ export class DeepField {
     }
     this.prop.position.set(-7.6, 0, 0);
     g.add(this.prop);
+
+    // limber holes: the flood-drain slots real hulls carry along the waterline
+    const slotGeo = new THREE.BoxGeometry(0.55, 0.10, 0.06);
+    const slotMat = new THREE.MeshStandardMaterial({ color: 0x0a0d10, roughness: 0.9 });
+    for (let s = -1; s <= 1; s += 2) {
+      for (let i = 0; i < 6; i++) {
+        const slot = new THREE.Mesh(slotGeo, slotMat);
+        slot.position.set(-3.4 + i * 1.35, -1.35, s * 1.62);
+        slot.rotation.x = s * 0.6;
+        g.add(slot);
+      }
+    }
+    // towed-array fairing along the upper stern
+    const fairing = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 4.6, 10), darkMat);
+    fairing.rotation.z = Math.PI / 2;
+    fairing.position.set(-3.4, 1.6, 0.6);
+    g.add(fairing);
 
     // portholes + running lights
     const ph = new THREE.SphereGeometry(0.13, 8, 8);

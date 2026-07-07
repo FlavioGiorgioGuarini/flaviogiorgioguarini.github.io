@@ -1,5 +1,7 @@
 /* CAERUS: mission companion. Original slab-monolith design (four floating
-   segments), voice in and out via the Web Speech API. Two brains:
+   segments) in space; underwater it becomes MEDUSA — a bioluminescent
+   jellyfish (pulsing bell, swaying tentacles) — same mind, second body.
+   Voice in and out via the Web Speech API. Two brains:
    - on-device intent engine (always available, zero network) and
    - optional grounded LLM (ai-config.js key) locked to the public KB.
    The LLM path degrades to the local answer on any error or timeout. */
@@ -43,7 +45,53 @@ export function startBot({ canvas }) {
   scene.add(teal);
   scene.add(new THREE.AmbientLight(0x202226, 1.6));
 
-  let bt = 0, talking = 0, listening = false;
+  /* ---------- MEDUSA: the underwater body ---------- */
+  const jelly = new THREE.Group();
+  jelly.scale.setScalar(0.001);
+  scene.add(jelly);
+  const bellMat = new THREE.MeshPhysicalMaterial({
+    color: 0x2f8f8a, transparent: true, opacity: 0.6,
+    roughness: 0.25, metalness: 0, clearcoat: 0.8,
+    emissive: 0x59e8d5, emissiveIntensity: 0.35,
+    sheen: 1, sheenColor: new THREE.Color(0x9cfff1), sheenRoughness: 0.4,
+    side: THREE.DoubleSide, depthWrite: false,
+  });
+  const bell = new THREE.Mesh(
+    new THREE.SphereGeometry(1.05, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.55),
+    bellMat,
+  );
+  bell.position.y = 0.5;
+  jelly.add(bell);
+  const rim = new THREE.Mesh(
+    new THREE.TorusGeometry(0.98, 0.05, 8, 28),
+    new THREE.MeshStandardMaterial({ color: 0x0c2825, emissive: 0x9cfff1, emissiveIntensity: 1.2 }),
+  );
+  rim.rotation.x = Math.PI / 2;
+  rim.position.y = 0.14;
+  jelly.add(rim);
+  /* tentacles: 7 swaying lines + 2 oral arms, rebuilt on the CPU (cheap) */
+  const TSEG = 9, tentacles = [];
+  const tentMat = new THREE.LineBasicMaterial({
+    color: 0x7df0e2, transparent: true, opacity: 0.65,
+  });
+  for (let i = 0; i < 9; i++) {
+    const oral = i >= 7;
+    const geo = new THREE.BufferGeometry();
+    const arr = new Float32Array((TSEG + 1) * 3);
+    geo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+    const line = new THREE.Line(geo, tentMat);
+    const a = (i / 7) * Math.PI * 2;
+    tentacles.push({
+      line, arr, geo,
+      x0: oral ? (i === 7 ? -0.16 : 0.16) : Math.cos(a) * 0.86,
+      z0: oral ? 0 : Math.sin(a) * 0.86,
+      len: oral ? 2.6 : 1.9,
+      ph: Math.random() * 6.28,
+    });
+    jelly.add(line);
+  }
+
+  let bt = 0, talking = 0, listening = false, mode = 0;
 
   /* ---------- panel + chat ---------- */
   const panel = document.getElementById('bot-panel');
@@ -181,15 +229,48 @@ export function startBot({ canvas }) {
   }
 
   /* ---------- per-frame animation, driven by the main loop ---------- */
-  function frame(dt, musicLevel = 0) {
+  function frame(dt, musicLevel = 0, mix = 0) {
     bt += dt;
+    mode += (mix - mode) * Math.min(dt * 2.5, 1);
     const energy = talking ? 0.34 : listening ? 0.22 : 0.05 + musicLevel * 0.1;
-    slabs.forEach((s, i) => {
-      s.position.y = Math.sin(bt * (talking ? 9 : 1.6) + i * 1.35) * energy * (i === 1 || i === 2 ? 1.25 : 0.8);
-      s.rotation.x = Math.sin(bt * 0.7 + i) * 0.04;
-    });
-    group.rotation.y = Math.sin(bt * 0.4) * 0.32;
-    teal.intensity = 4.5 + Math.sin(bt * 3) * 1.2 + (talking ? 3 : 0);
+
+    // monolith body (space)
+    group.scale.setScalar(Math.max(0.001, 1 - mode));
+    group.visible = mode < 0.98;
+    if (group.visible) {
+      slabs.forEach((s, i) => {
+        s.position.y = Math.sin(bt * (talking ? 9 : 1.6) + i * 1.35) * energy * (i === 1 || i === 2 ? 1.25 : 0.8);
+        s.rotation.x = Math.sin(bt * 0.7 + i) * 0.04;
+      });
+      group.rotation.y = Math.sin(bt * 0.4) * 0.32;
+    }
+
+    // jellyfish body (ocean): the bell pulses, the tentacles trail
+    jelly.scale.setScalar(Math.max(0.001, mode));
+    jelly.visible = mode > 0.02;
+    if (jelly.visible) {
+      const rate = talking ? 5.2 : 2.1;
+      const pulse = Math.sin(bt * rate);
+      bell.scale.set(1 - pulse * 0.07, 1 + pulse * 0.13, 1 - pulse * 0.07);
+      rim.scale.setScalar(1 - pulse * 0.06);
+      jelly.position.y = Math.sin(bt * 0.9) * 0.22 + pulse * 0.06;
+      jelly.rotation.y = Math.sin(bt * 0.3) * 0.4;
+      jelly.rotation.z = Math.sin(bt * 0.5) * 0.08;
+      bellMat.emissiveIntensity = 0.3 + (talking ? 0.5 : 0.12) + musicLevel * 0.3 + pulse * 0.08;
+      for (const tc of tentacles) {
+        const A = tc.arr;
+        for (let s = 0; s <= TSEG; s++) {
+          const f = s / TSEG;
+          A[s * 3] = tc.x0 * (1 - f * 0.25) + Math.sin(bt * 1.6 + tc.ph + f * 2.6) * 0.16 * f;
+          A[s * 3 + 1] = 0.12 - f * tc.len - pulse * 0.05 * f;
+          A[s * 3 + 2] = tc.z0 * (1 - f * 0.25) + Math.cos(bt * 1.3 + tc.ph + f * 2.2) * 0.14 * f;
+        }
+        tc.geo.attributes.position.needsUpdate = true;
+      }
+      tentMat.opacity = 0.4 + mode * 0.25;
+    }
+
+    teal.intensity = 4.5 + Math.sin(bt * 3) * 1.2 + (talking ? 3 : 0) + mode * 1.5;
     renderer.render(scene, cam);
   }
 

@@ -540,7 +540,7 @@ function loop(now) {
   state.ghost.y += (state.ghost.ty - state.ghost.y) * 0.16;
   ghost.style.transform = `translate(${state.ghost.x}px, ${state.ghost.y}px)`;
   if (state.orbit && nearViewport('#systems')) state.orbit.frame(state.audio.mid);
-  if (state.bot) state.bot.frame(dt, state.audio.level);
+  if (state.bot) state.bot.frame(dt, state.audio.level, state.scene ? state.scene.mix : 0);
   governor.tick(dt);
   requestAnimationFrame(loop);
 }
