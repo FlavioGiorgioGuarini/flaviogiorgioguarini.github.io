@@ -1,7 +1,7 @@
 # Flavio Giorgio Guarini — Interstellar-grade Portfolio
 
 ## What it is
-Personal portfolio at https://flaviogiorgioguarini.github.io/ — a single-page cinematic experience. The visitor doesn't browse a résumé; they enter Flavio's universe: deep space, his own soundtrack (DNS_1, composed by him), and interactions that respond to hand, face, gaze, and sound.
+Personal portfolio at https://flaviogiorgioguarini.github.io/ — a single-page cinematic experience. The visitor doesn't browse a résumé; they enter Flavio's deep: his own soundtrack (DNS_1, composed by him), a world that flips between space and ocean, and interactions built dual-hand first — both hands tracked and mirrored as two bionic hands with distinct roles (dominant = precision, other = motion).
 
 ## Who it's for
 Recruiters, security/AI teams, collaborators, clients. They should leave thinking: "working with him means going beyond — response and evolution."
@@ -16,16 +16,18 @@ Kicker: **SECURITY · SOUND · SYSTEMS**. 22, Bari, Italy. Two bachelor's degree
 - Layout: massive spacing, each section a film set.
 - Motion: slow, physical, inertial. Peaks follow the music. Reduced-motion gets a dignified still version.
 - Second world (v7): **Ocean Mode** — a shaka gesture or the wave button submerges the entire site (foam sweep, lowpassed score, living hand-reactive water, submarine instead of the moon). Same content and functions, different scenography.
+- v8 — **"Into the Deep"**: the narrative flips from stargazing to descent (he was a competitive swimmer before an engineer; the water is biographical). Dual-hand grammar everywhere: bi-pinch tears the world open, symmetric palm spread clears the chrome, middle finger closes the front-most panel. Ocean gains koi that avoid your hands, a detailed sub and CAERUS-as-jellyfish; space gains rare rocket launches. Original 16-bit easter eggs only — no borrowed IP, ever.
 
 ## Sections (in narrative order)
-1. **Hero** — hyperreal cyborg hand (Higgsfield), audio-reactive particle swarm on DNS_1, headline about going beyond.
-2. **About** — 3D timeline 2003→2027 (Bari → Gran Canaria 2017 → sound 2019 → diploma 2023 → Rome 2024 → security pivot 2025 → dual degree + Erasmus León 2026 → double graduation 2027).
+1. **Hero** — "Into the deep": two live bionic hands, audio-reactive deep field on DNS_1.
+2. **Descent** — timeline 2003→2027 with 8 3D waypoint glyphs that change character per world (Bari → Gran Canaria 2017 → sound 2019 → diploma 2023 → Rome 2024 → security pivot 2025 → dual degree + Erasmus León 2026 → double graduation 2027).
 3. **Projects** — exactly 3: SIEM 3D v2.0 (flagship), Second Brain AI (teaser only, "Coming soon", zero detail), Sound (Ableton beta testing + this very soundtrack).
 4. **Skills** — data-driven orbital visualization, no icon soup.
-5. **Mini Game** — 8-bit map of his past, modern shader layer on top.
-6. **CTF Moon** — 3D moon, riddle, reward: a coffee with Flavio.
-7. **Contact** — email + WhatsApp, clean and cinematic.
-Persistent: TARS-inspired robot companion (original design), voice chat, corner canvas.
+5. **Past Lives Arcade** — 8-bit map of his past, modern shader layer on top.
+6. **Hand Atelier** — two-brush light painting (pinch either hand), grabbable orbs with momentum, Save-as-JPG + Reset.
+7. **CTF Moon** — 3D moon, riddle, reward: a coffee with Flavio.
+8. **Contact + Game Deck** — email + WhatsApp, then two cabinets: DEEP RUNNER (10 levels, space/abyss skins, bosses at 5 and 10) and YOU vs THE LARPERS (scripted 1-HP overwhelm, Flavio's rescue, THE DEPTH BREAK).
+Persistent: CAERUS companion (slab monolith in space, jellyfish underwater), voice chat, corner canvas, first-visit two-hand guide (? replays it).
 
 ## Technical constraints
 - Static GitHub Pages. No build step. Vanilla ES modules + self-hosted Three.js. Self-hosted MediaPipe (lazy, opt-in camera only).

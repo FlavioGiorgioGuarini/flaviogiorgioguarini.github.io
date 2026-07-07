@@ -1,13 +1,15 @@
 # flaviogiorgioguarini.github.io
 
-Total-black 3D portfolio with a second, fully underwater skin. Static,
-hand-written, fully self-hosted: no build step, no CDN at runtime, no
-trackers, no generated imagery — every visual is real-time WebGL/canvas.
+Total-black 3D portfolio with a second, fully underwater skin — built
+**dual-hand first** (v8 "Into the Deep"). Static, hand-written, fully
+self-hosted: no build step, no CDN at runtime, no trackers, no generated
+imagery — every visual is real-time WebGL/canvas.
 
 **Six languages** (EN·IT·ES·DE·PT·FR): the full experience is localized in
-`js/i18n.js`, plus a spoken audio-description of the site per language
+`js/i18n.js` + `js/i18n-x.js`, plus a spoken audio-description per language
 (utility button in the top bar). Hand gestures double as an accessibility
-input: the whole site can be explored with one hand.
+input: the whole site can be explored with two hands, one hand, keyboard,
+pointer or touch — full parity.
 
 ## What's inside
 
@@ -17,20 +19,39 @@ input: the whole site can be explored with one hand.
 - **Deep-field scene** — Three.js (self-hosted, pinned 0.182), ACES filmic tone
   mapping + PMREM environment for real PBR: shader starfield, milky-way band,
   audio-reactive dust, procedural displacement moon with albedo maria.
-- **Ocean Mode** — a shaka 🤙 (or the wave button) submerges the whole site: foam
-  sweep, lowpassed score, living water surface that reacts to your hand and the
-  phone's gyroscope, god rays, marine snow, bubbles, caustic seabed, and a
-  patrol submarine where the moon used to be. Same content, second world.
-- **Cockpit hand** — a real-time bionic 3D hand (joints + bones driven directly by
-  MediaPipe's 21 world landmarks, One-Euro filtered, VR-style, no rig).
-  Open hand mirrors you; closed fist flies — up/down scrolls, left/right jumps
-  sections; **point at any button for 3 s to click it** (dwell ring shows the
-  countdown). Underwater the hand turns amphibious: iridescent skin and webbing.
-  Without a camera it idles cinematically. All on-device; keyboard/touch parity.
+- **Ocean Mode** — a shaka 🤙 (or the wave button, or a two-hand pinch-and-spread)
+  submerges the whole site: foam sweep, lowpassed score, living water that reacts
+  to both hands and the phone's gyroscope, god rays, marine snow, bubbles, caustic
+  seabed, a school of procedural **koi** that steers away from your hands, and a
+  detailed patrol submarine (anechoic tiling, limber holes, propeller wake) where
+  the moon used to be. Same content, second world. Space keeps its own rare
+  spectacle: **rocket launches** climbing out of the deep field.
+- **Cockpit hands** — TWO real-time bionic 3D hands (joints + bones driven directly
+  by MediaPipe's 21 world landmarks per hand, per-hand One-Euro banks, VR-style,
+  no rig), with anatomical tapering and palm volume. The grammar is dual-hand
+  first: your **dominant hand** (learned behaviourally, not assumed) is precision —
+  **point at any button for 3 s to click it** (dwell ring), pinch to paint or grab;
+  the other hand is motion — closed fist flies, up/down scrolls, left/right jumps
+  sections. **Both hands pinching and spreading tears the world open** (space ↔
+  ocean); spreading both open palms fades the chrome away. Underwater the pair
+  turns amphibious: iridescent skin and webbing. Without a camera one hand idles
+  cinematically. All on-device; keyboard/touch parity everywhere.
+- **Hand Atelier** — a persistent light-painting canvas with two simultaneous
+  brushes (pinch either hand), pointer/multi-touch parity, grabbable glass orbs
+  with momentum, starlight or bioluminescent-ink palettes, **Save-as-JPG** export.
+- **Game deck** — two cabinets at the end of the site, both skinned by the active
+  world: **DEEP RUNNER** (10 levels, patterns, powerups, bosses at 5 and 10 —
+  GATEKEEPER/INVENTOR PRIME in space, ANGLER SOVEREIGN/LEVIATHAN underwater) and
+  **YOU vs THE LARPERS** (a stickman brawl that scripts you down to 1 HP before
+  Flavio arrives with THE DEPTH BREAK). Localized HUDs, Esc returns to the site.
+- **Original easter eggs** — rare 16-bit vignettes drawn at runtime (a golden
+  supersonic hero circling a top-hatted mech inventor on an asteroid; a shy pixel
+  axolotl in the reef; a pearl-diver chase). Homages by design, no borrowed IP.
 - **Matrix face** — optional: when the camera sees a face, its 478 landmarks
   become a dim, slow constellation of mutating hex digits deep in the backdrop.
   Quality-gated, always on-device, never recorded.
-- **CAERUS** — original TARS-inspired slab companion. Voice in/out via the Web
+- **CAERUS** — original TARS-inspired slab companion; underwater it becomes a
+  bioluminescent **jellyfish** (same mind, second body). Voice in/out via the Web
   Speech API. On-device intent engine by default; optional grounded LLM upgrade
   (below) locked to the public knowledge base in `js/kb.js`.
 - **Past Lives Arcade** — 8-bit map of the journey. One log matters to the moon.

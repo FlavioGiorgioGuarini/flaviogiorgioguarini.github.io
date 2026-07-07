@@ -1,5 +1,8 @@
 /* Six-language experience: EN canonical, IT/ES/DE/PT/FR written idiomatically,
-   not machine-mirrored. t('a.b.c') resolves in the active locale with EN fallback. */
+   not machine-mirrored. t('a.b.c') resolves in the active locale with EN fallback.
+   v8 strings live in i18n-x.js and are deep-merged over this base at load. */
+
+import { X } from './i18n-x.js';
 
 export const LOCALES = ['en', 'it', 'es', 'de', 'pt', 'fr'];
 export const VOICE = { en: 'en-US', it: 'it-IT', es: 'es-ES', de: 'de-DE', pt: 'pt-PT', fr: 'fr-FR' };
@@ -714,6 +717,17 @@ export const I18N = {
     },
   },
 };
+
+/* v8 extension pack: new strings + the depth narrative, merged over every
+   locale so the base copy above stays untouched and reviewable */
+function xMerge(dst, src) {
+  for (const k in src) {
+    const v = src[k];
+    if (v && typeof v === 'object' && !Array.isArray(v)) xMerge(dst[k] ?? (dst[k] = {}), v);
+    else dst[k] = v;
+  }
+}
+LOCALES.forEach((l) => xMerge(I18N[l], X[l] ?? {}));
 
 /* keyword sets for the bot, language-agnostic matching */
 export const BOT_KEYS = {
