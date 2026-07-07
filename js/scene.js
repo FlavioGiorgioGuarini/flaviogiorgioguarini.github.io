@@ -118,11 +118,14 @@ export class DeepField {
     this.camera = new THREE.PerspectiveCamera(58, 1, 0.1, 700);
     this.camera.position.set(0, 0, 26);
     this.t = 0;
-    this.sectionCount = 7;
+    this.sectionCount = 8;
     this.scrollY = 0;
     this.targetScroll = 0;
     this.shake = 0;
     this.warp = 0;
+    this.portal = 1;         // bi-pinch world-scale flourish, eased
+    this.portalT = 1;
+    this.extras = null;      // lazy: rockets, koi, easter eggs, glyphs
     this.dprCap = this.q.dprCap;
     this.pix = 1;
 
@@ -587,20 +590,22 @@ export class DeepField {
     bubGeo.setAttribute('aSeed', new THREE.BufferAttribute(bs, 1));
     this.bubU = {
       uTime: { value: 0 }, uPix: { value: 1 }, uFade: { value: 0 },
-      uHand: { value: new THREE.Vector3(0, 0, 999) }, uBurst: { value: 0 },
+      uHand: { value: new THREE.Vector3(0, 0, 999) },
+      uHand2: { value: new THREE.Vector3(0, 0, 999) },
+      uBurst: { value: 0 },
     };
     this.bubbles = new THREE.Points(bubGeo, new THREE.ShaderMaterial({
       uniforms: this.bubU,
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
       vertexShader: `
         attribute float aSeed;
-        uniform float uTime, uPix, uBurst; uniform vec3 uHand;
+        uniform float uTime, uPix, uBurst; uniform vec3 uHand, uHand2;
         varying float vA;
         void main(){
           vec3 p = position;
           p.y = mod(p.y + uTime * (1.2 + aSeed * 2.2) + 23.0, 46.0) - 23.0;
           p.x += sin(uTime * (0.8 + aSeed) + aSeed * 30.0) * 0.7;
-          float near = 1.0 - smoothstep(2.0, 9.0, distance(p, uHand));
+          float near = 1.0 - smoothstep(2.0, 9.0, min(distance(p, uHand), distance(p, uHand2)));
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
           vA = (0.10 + near * (0.30 + uBurst * 0.5)) * smoothstep(36.0, 6.0, -mv.z);
           gl_PointSize = (2.2 + aSeed * 3.4) * (1.0 + near * (0.8 + uBurst)) * uPix * (86.0 / -mv.z);
@@ -804,16 +809,22 @@ export class DeepField {
     v.set((nx - 0.5) * 64, -64 + ny * 76, this.t, Math.min(amp, 1.2));
   }
 
-  /* continuous hand presence for bubbles (world-approximate) */
-  setHand(nx, ny, speed) {
+  /* continuous hand presence for bubbles (world-approximate); i = 0 | 1 */
+  setHand(i, nx, ny, speed) {
     const h = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * 14;
     const w = h * this.camera.aspect;
-    this.bubU.uHand.value.set(
+    const u = i === 1 ? this.bubU.uHand2 : this.bubU.uHand;
+    u.value.set(
       this.camera.position.x + (nx - 0.5) * 2 * w,
       this.camera.position.y - (ny - 0.5) * 2 * h,
       this.camera.position.z - 14,
     );
     this.bubU.uBurst.value = Math.min(this.bubU.uBurst.value + speed * 0.02, 1);
+  }
+
+  /* bi-pinch portal: live world-scale flourish while both hands pinch */
+  setPortal(v) {
+    this.portalT = Math.max(0.78, Math.min(1.55, v));
   }
 
   /* governor hooks */
@@ -897,12 +908,13 @@ export class DeepField {
     this.amb.intensity = 2.2 + mix * 0.9;
 
     // nebulae idle near-black, flare with the score; tinted aqua underwater
+    this.portal += (this.portalT - this.portal) * Math.min(dt * 6, 1);
     if (!calm) {
       const nScale = 1 - mix * 0.45;
       this.nebulae[0].material.opacity = (0.055 + mid * 0.22) * nScale;
       this.nebulae[1].material.opacity = (0.045 + bass * 0.26) * nScale;
       this.nebulae[2].material.opacity = (0.05 + level * 0.18) * nScale;
-      const fov = 58 + bass * 2.4 + this.warp * 16 + mix * 2;
+      const fov = 58 + bass * 2.4 + this.warp * 16 + mix * 2 - (this.portal - 1) * 14;
       if (Math.abs(fov - this.camera.fov) > 0.08) {
         this.camera.fov = fov;
         this.camera.updateProjectionMatrix();
@@ -1018,6 +1030,9 @@ export class DeepField {
       this.bubU.uBurst.value *= 0.94;
       this.bubbles.position.y = y;
     }
+
+    /* lazy layer: rockets, koi school, easter eggs, timeline glyphs */
+    this.extras?.frame(dt, audio || {}, this, y);
 
     this.renderer.render(this.scene, this.camera);
   }

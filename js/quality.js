@@ -30,6 +30,8 @@ export function detectQuality() {
     stars: [2800, 5600, 9000][tier],
     dust: tier > 0,
     face: tier > 0,           // Matrix face backdrop needs headroom
+    hands: tier > 0 ? 2 : 1,  // dual-hand first; weakest devices track one
+    koi: [3, 5, 7][tier],
     dprCap: [1.25, 1.5, 1.75][tier],
     waterSeg: [40, 56, 72][tier],
     snow: [140, 260, 380][tier],

@@ -1,11 +1,21 @@
-/* Cockpit hand: a real-time bionic hand driven by MediaPipe's 21 world
-   landmarks, VR-style — joints and bones follow your fingers directly.
-   v7 realism pass: physical materials under the scene envmap (titanium
-   phalanges, carbon joints, ceramic tips), anatomical per-bone tapering,
-   rounded palm plate, forearm stub with a lit seam ring.
-   Ocean mode morphs it amphibious: iridescent bio-polymer, bioluminescent
-   tips, translucent webbing stretched between the fingers.
-   ponytail: shared geometries, zero assets, zero skinning. */
+/* Cockpit hands, dual-hand first (v8): TWO real-time bionic hands driven
+   by MediaPipe world landmarks, VR-style — joints and bones follow the
+   visitor's fingers directly, no rig, no assets.
+
+   Realism pass over v7:
+   - anatomical tapering baked into the bone geometry (each phalanx narrows
+     toward the tip) on top of per-bone radii;
+   - palm volume: palmar plate + dorsal plate + thenar and hypothenar pads
+     that follow the live joints, so the hand reads as flesh-over-frame;
+   - one shared physical material set under the scene envmap (titanium,
+     carbon joints, ceramic tips) — a single lerp drives the whole pair
+     between worlds. Ocean morphs them amphibious: iridescent bio-polymer,
+     bioluminescent tips, translucent webbing.
+
+   Presence choreography: each hand materializes (scale ease) when its
+   track goes live and dissolves when lost. With no camera at all, the
+   right hand idles cinematically; the left waits in the dark.
+   ponytail: shared geometries and materials across both hands. */
 
 import * as THREE from '../vendor/three/three.module.min.js';
 
@@ -36,17 +46,17 @@ const DEPTH = 7;       // distance in front of the camera
 /* material presets: space (bionic titanium) ↔ ocean (amphibious) */
 const PRESET = {
   space: {
-    bone: { color: 0x585f69, rough: 0.30, met: 0.92, cc: 0.5, irid: 0 },
+    bone: { color: 0x5d646e, rough: 0.26, met: 0.94, cc: 0.6, irid: 0, sheen: 0.15 },
     joint: { color: 0x2e333b, rough: 0.42, met: 0.78, em: 0x59e8d5, ei: 0.10 },
-    tip: { color: 0x3a3f45, rough: 0.48, met: 0.60, em: 0xbfe8e2, ei: 0.16 },
-    palm: { color: 0x31363d, rough: 0.40, met: 0.72 },
+    tip: { color: 0x3a3f45, rough: 0.44, met: 0.60, em: 0xbfe8e2, ei: 0.16 },
+    palm: { color: 0x31363d, rough: 0.38, met: 0.74, cc: 0.4, sheen: 0.1 },
     web: 0,
   },
   ocean: {
-    bone: { color: 0x1d5049, rough: 0.36, met: 0.30, cc: 0.9, irid: 0.75 },
+    bone: { color: 0x1d5049, rough: 0.36, met: 0.28, cc: 0.9, irid: 0.8, sheen: 0.9 },
     joint: { color: 0x16403c, rough: 0.44, met: 0.25, em: 0x59e8d5, ei: 0.30 },
     tip: { color: 0x1d4f47, rough: 0.38, met: 0.20, em: 0x9cfff1, ei: 0.65 },
-    palm: { color: 0x1a453f, rough: 0.42, met: 0.28 },
+    palm: { color: 0x1a453f, rough: 0.42, met: 0.26, cc: 0.7, sheen: 0.8 },
     web: 0.5,
   },
 };
@@ -83,83 +93,54 @@ function lerpMat(mat, a, b, m) {
   }
   if (a.cc != null && 'clearcoat' in mat) mat.clearcoat = a.cc + ((b.cc ?? a.cc) - a.cc) * m;
   if (a.irid != null && 'iridescence' in mat) mat.iridescence = a.irid + ((b.irid ?? a.irid) - a.irid) * m;
+  if (a.sheen != null && 'sheen' in mat) mat.sheen = a.sheen + ((b.sheen ?? a.sheen) - a.sheen) * m;
 }
 
-export class Hand3D {
-  constructor(camera) {
+/* ---------- one hand: geometry rig + smoothing + presence ---------- */
+class OneHand {
+  constructor(camera, mats, geos) {
     this.camera = camera;
+    this.mats = mats;
     this.group = new THREE.Group();
     camera.add(this.group);
-    this.mode = 0; // 0 space · 1 ocean
-
-    const jointGeo = new THREE.SphereGeometry(0.09, 16, 14);
-    const boneGeo = new THREE.CylinderGeometry(0.05, 0.06, 1, 12);
-    this.boneMat = new THREE.MeshPhysicalMaterial({
-      color: 0x585f69, metalness: 0.92, roughness: 0.3,
-      clearcoat: 0.5, clearcoatRoughness: 0.25,
-      iridescenceIOR: 1.3, iridescenceThicknessRange: [120, 480],
-    });
-    this.jointMat = new THREE.MeshStandardMaterial({
-      color: 0x2e333b, metalness: 0.78, roughness: 0.42,
-      emissive: 0x59e8d5, emissiveIntensity: 0.10,
-    });
-    this.tipMat = new THREE.MeshStandardMaterial({
-      color: 0x3a3f45, metalness: 0.6, roughness: 0.48,
-      emissive: 0xbfe8e2, emissiveIntensity: 0.16,
-    });
-    this.palmMat = new THREE.MeshPhysicalMaterial({
-      color: 0x31363d, metalness: 0.72, roughness: 0.4, clearcoat: 0.35,
-    });
-    // a warm key of its own, range-limited so it barely touches the scene
-    this.lamp = new THREE.PointLight(0xf2e6d4, 26, 16, 1.8);
-    this.lamp.position.set(-3, 4, 3);
-    this.group.add(this.lamp);
 
     this.joints = [];
     for (let i = 0; i < 21; i++) {
-      const scale = i === 0 ? 1.9 : TIPS.has(i) ? 0.95 : MCP.has(i) ? 1.35 : 1.15;
-      const m = new THREE.Mesh(jointGeo, TIPS.has(i) ? this.tipMat : this.jointMat);
+      const scale = i === 0 ? 1.9 : TIPS.has(i) ? 0.95 : MCP.has(i) ? 1.35 : 1.12;
+      const m = new THREE.Mesh(geos.joint, TIPS.has(i) ? mats.tip : mats.joint);
       m.scale.setScalar(scale);
+      if (TIPS.has(i)) m.scale.y *= 1.18;   // fingertip pads, slightly oval
       this.group.add(m);
       this.joints.push(m);
     }
     this.bones = BONES.map((_, i) => {
-      const m = new THREE.Mesh(boneGeo, this.boneMat);
+      const m = new THREE.Mesh(geos.bone, mats.bone);
       m.userData.r = BONE_R[i];
       this.group.add(m);
       return m;
     });
 
-    // rounded palm plate + slimmer dorsal plate for mechanical depth
-    const palmGeo = new THREE.CapsuleGeometry(0.5, 0.55, 6, 14);
-    this.palm = new THREE.Mesh(palmGeo, this.palmMat);
-    this.palm.scale.set(1, 1, 0.24);
+    // palm volume: palmar plate, dorsal plate, thenar + hypothenar pads
+    this.palm = new THREE.Mesh(geos.pad, mats.palm);
     this.group.add(this.palm);
-    this.dorsal = new THREE.Mesh(palmGeo, this.boneMat);
-    this.dorsal.scale.set(0.72, 0.8, 0.14);
+    this.dorsal = new THREE.Mesh(geos.pad, mats.bone);
     this.group.add(this.dorsal);
+    this.thenar = new THREE.Mesh(geos.pad, mats.palm);
+    this.group.add(this.thenar);
+    this.hypo = new THREE.Mesh(geos.pad, mats.palm);
+    this.group.add(this.hypo);
 
     // forearm stub with a lit seam ring: anchors the hand to the cockpit
-    this.forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.36, 1.5, 18), this.boneMat);
+    this.forearm = new THREE.Mesh(geos.forearm, mats.bone);
     this.group.add(this.forearm);
-    this.cuff = new THREE.Mesh(
-      new THREE.TorusGeometry(0.37, 0.022, 10, 32),
-      new THREE.MeshStandardMaterial({ color: 0x0c2825, emissive: 0x59e8d5, emissiveIntensity: 1.1 }),
-    );
+    this.cuff = new THREE.Mesh(geos.cuff, mats.cuff);
     this.group.add(this.cuff);
 
     // webbing membranes (ocean): 4 quads = 8 triangles, rebuilt per frame
     this.webGeo = new THREE.BufferGeometry();
     this.webPos = new Float32Array(WEBS.length * 6 * 3);
     this.webGeo.setAttribute('position', new THREE.BufferAttribute(this.webPos, 3));
-    this.webMat = new THREE.MeshPhysicalMaterial({
-      color: 0x0d3f3a, metalness: 0.1, roughness: 0.35,
-      transparent: true, opacity: 0, side: THREE.DoubleSide,
-      iridescence: 0.9, iridescenceIOR: 1.3,
-      sheen: 1, sheenColor: new THREE.Color(0x59e8d5), sheenRoughness: 0.4,
-      depthWrite: false,
-    });
-    this.web = new THREE.Mesh(this.webGeo, this.webMat);
+    this.web = new THREE.Mesh(this.webGeo, mats.web);
     this.web.visible = false;
     this.group.add(this.web);
 
@@ -169,12 +150,15 @@ export class Hand3D {
     this.anchorTarget = new THREE.Vector3();
     this.idlePose = relaxedPose();
     this.tracked = false;
+    this.presence = 0;        // eased 0..1 materialization
+    this.presTarget = 0;
     this._tmp = new THREE.Vector3();
     this._tmp2 = new THREE.Vector3();
     this._up = new THREE.Vector3(0, 1, 0);
     this._z = new THREE.Vector3(0, 0, 1);
     this._ax = new THREE.Vector3(1, 0, 0);
     this._az = new THREE.Vector3(0, 0, 1);
+    this.group.visible = false;
   }
 
   _screenAnchor(nx, ny, out) {
@@ -186,6 +170,7 @@ export class Hand3D {
   /* live landmarks: world = 21 {x,y,z} metres (unmirrored), x/y = screen 0..1 (mirrored) */
   setPose({ world, x, y }) {
     this.tracked = true;
+    this.presTarget = 1;
     this._screenAnchor(x, y, this.anchorTarget);
     const w0 = world[0];
     for (let i = 0; i < 21; i++) {
@@ -199,6 +184,7 @@ export class Hand3D {
 
   setIdle(t, px, py) {
     this.tracked = false;
+    this.presTarget = 1;
     this._screenAnchor(0.74 + px * 0.015, 0.86 + py * 0.012, this.anchorTarget);
     const breathe = Math.sin(t * 0.9) * 0.15;
     const tiltZ = 0.42 + Math.sin(t * 0.23) * 0.05 + px * 0.12;
@@ -211,22 +197,16 @@ export class Hand3D {
     }
   }
 
-  /* 0 = space, 1 = ocean; called with the scene's eased mix every frame */
-  setMode(m) {
-    if (m === this.mode) return;
-    this.mode = m;
-    const S = PRESET.space, O = PRESET.ocean;
-    lerpMat(this.boneMat, S.bone, O.bone, m);
-    lerpMat(this.jointMat, S.joint, O.joint, m);
-    lerpMat(this.tipMat, S.tip, O.tip, m);
-    lerpMat(this.palmMat, S.palm, O.palm, m);
-    const webOp = S.web + (O.web - S.web) * m;
-    this.webMat.opacity = webOp;
-    this.web.visible = webOp > 0.02;
-    this.lamp.color.setHex(m > 0.5 ? 0xbfeee8 : 0xf2e6d4);
-  }
+  drop() { this.tracked = false; this.presTarget = 0; }
 
-  update(dt, level = 0) {
+  update(dt) {
+    this.presence += (this.presTarget - this.presence) * Math.min(dt * 3.2, 1);
+    const vis = this.presence > 0.015;
+    this.group.visible = vis;
+    if (!vis) return;
+    const s = 0.25 + this.presence * 0.75;   // materialize: grow into place
+    this.group.scale.setScalar(s);
+
     const k = this.tracked ? 0.45 : 0.06;
     this.anchor.lerp(this.anchorTarget, k);
     for (let i = 0; i < 21; i++) {
@@ -243,7 +223,7 @@ export class Hand3D {
       m.scale.set(m.userData.r, len, m.userData.r);
     });
 
-    // palm plates span wrist and knuckle bridge
+    // palmar/dorsal plates span wrist and knuckle bridge
     const w = this.joints[0].position, i5 = this.joints[5].position,
           i9 = this.joints[9].position, i17 = this.joints[17].position;
     this.palm.position.copy(w).add(i5).add(i9).add(i17).multiplyScalar(0.25);
@@ -252,10 +232,21 @@ export class Hand3D {
     const normal = this._tmp.clone().cross(across).normalize();
     this.palm.quaternion.setFromUnitVectors(this._z, normal);
     const spanY = this._tmp.length();
-    this.palm.scale.set(across.length() * 0.5, spanY * 0.42, 0.24);
+    const spanX = across.length();
+    this.palm.scale.set(spanX * 0.5, spanY * 0.42, 0.24);
     this.dorsal.position.copy(this.palm.position).addScaledVector(normal, -0.12);
     this.dorsal.quaternion.copy(this.palm.quaternion);
-    this.dorsal.scale.set(across.length() * 0.36, spanY * 0.34, 0.14);
+    this.dorsal.scale.set(spanX * 0.36, spanY * 0.34, 0.14);
+
+    // thenar pad rides the thumb root; hypothenar hugs the pinky edge
+    const j1 = this.joints[1].position, j2 = this.joints[2].position;
+    this.thenar.position.copy(j1).add(j2).add(w).multiplyScalar(1 / 3)
+      .addScaledVector(normal, 0.05);
+    this.thenar.quaternion.copy(this.palm.quaternion);
+    this.thenar.scale.set(spanX * 0.20, spanY * 0.24, 0.20);
+    this.hypo.position.copy(w).add(i17).multiplyScalar(0.5).addScaledVector(normal, 0.04);
+    this.hypo.quaternion.copy(this.palm.quaternion);
+    this.hypo.scale.set(spanX * 0.16, spanY * 0.30, 0.16);
 
     // forearm continues the wrist→knuckle axis backwards
     const mid = this._tmp.copy(i5).add(i9).add(i17).multiplyScalar(1 / 3);
@@ -280,10 +271,109 @@ export class Hand3D {
       this.webGeo.attributes.position.needsUpdate = true;
       this.webGeo.computeVertexNormals();
     }
+  }
+}
 
+/* ---------- the pair ---------- */
+export class Hands3D {
+  constructor(camera) {
+    this.camera = camera;
+    this.mode = 0; // 0 space · 1 ocean
+
+    this.mats = {
+      bone: new THREE.MeshPhysicalMaterial({
+        color: 0x5d646e, metalness: 0.94, roughness: 0.26,
+        clearcoat: 0.6, clearcoatRoughness: 0.25,
+        iridescenceIOR: 1.3, iridescenceThicknessRange: [120, 480],
+        sheen: 0.15, sheenColor: new THREE.Color(0x9cfff1), sheenRoughness: 0.5,
+      }),
+      joint: new THREE.MeshStandardMaterial({
+        color: 0x2e333b, metalness: 0.78, roughness: 0.42,
+        emissive: 0x59e8d5, emissiveIntensity: 0.10,
+      }),
+      tip: new THREE.MeshStandardMaterial({
+        color: 0x3a3f45, metalness: 0.6, roughness: 0.44,
+        emissive: 0xbfe8e2, emissiveIntensity: 0.16,
+      }),
+      palm: new THREE.MeshPhysicalMaterial({
+        color: 0x31363d, metalness: 0.74, roughness: 0.38, clearcoat: 0.4,
+        sheen: 0.1, sheenColor: new THREE.Color(0x9cfff1), sheenRoughness: 0.5,
+      }),
+      cuff: new THREE.MeshStandardMaterial({
+        color: 0x0c2825, emissive: 0x59e8d5, emissiveIntensity: 1.1,
+      }),
+      web: new THREE.MeshPhysicalMaterial({
+        color: 0x0d3f3a, metalness: 0.1, roughness: 0.35,
+        transparent: true, opacity: 0, side: THREE.DoubleSide,
+        iridescence: 0.9, iridescenceIOR: 1.3,
+        sheen: 1, sheenColor: new THREE.Color(0x59e8d5), sheenRoughness: 0.4,
+        depthWrite: false,
+      }),
+    };
+    this.geos = {
+      joint: new THREE.SphereGeometry(0.09, 16, 14),
+      bone: new THREE.CylinderGeometry(0.047, 0.058, 1, 12),  // baked phalanx taper
+      pad: new THREE.CapsuleGeometry(0.5, 0.55, 6, 14),
+      forearm: new THREE.CylinderGeometry(0.30, 0.36, 1.5, 18),
+      cuff: new THREE.TorusGeometry(0.37, 0.022, 10, 32),
+    };
+
+    // one warm key for the pair, range-limited so it barely touches the scene
+    this.lamp = new THREE.PointLight(0xf2e6d4, 26, 16, 1.8);
+    this.lamp.position.set(-3, 4, 3);
+    camera.add(this.lamp);
+
+    this.hand = {
+      R: new OneHand(camera, this.mats, this.geos),
+      L: new OneHand(camera, this.mats, this.geos),
+    };
+    this.liveCount = 0;
+  }
+
+  /* feed the vision hands array (0, 1 or 2 entries) every detection frame */
+  setHands(list) {
+    this.liveCount = list.length;
+    const seen = { L: false, R: false };
+    for (const h of list) {
+      seen[h.uid] = true;
+      this.hand[h.uid].setPose(h);
+    }
+    if (!seen.L && this.hand.L.tracked) this.hand.L.drop();
+    if (!seen.R && this.hand.R.tracked) this.hand.R.drop();
+  }
+
+  /* no camera / no hands: the right hand keeps a cinematic idle */
+  setIdle(t, px, py) {
+    this.hand.R.setIdle(t, px, py);
+    this.hand.L.drop();
+  }
+
+  /* 0 = space, 1 = ocean; called with the scene's eased mix every frame */
+  setMode(m) {
+    if (m === this.mode) return;
+    this.mode = m;
+    const S = PRESET.space, O = PRESET.ocean;
+    lerpMat(this.mats.bone, S.bone, O.bone, m);
+    lerpMat(this.mats.joint, S.joint, O.joint, m);
+    lerpMat(this.mats.tip, S.tip, O.tip, m);
+    lerpMat(this.mats.palm, S.palm, O.palm, m);
+    const webOp = S.web + (O.web - S.web) * m;
+    this.mats.web.opacity = webOp;
+    const webVis = webOp > 0.02;
+    this.hand.L.web.visible = webVis && this.hand.L.group.visible;
+    this.hand.R.web.visible = webVis && this.hand.R.group.visible;
+    this.lamp.color.setHex(m > 0.5 ? 0xbfeee8 : 0xf2e6d4);
+  }
+
+  update(dt, level = 0) {
+    this.hand.R.update(dt);
+    this.hand.L.update(dt);
+    // keep webbing flags honest as hands materialize/dissolve
+    const webOn = this.mats.web.opacity > 0.02;
+    this.hand.R.web.visible = webOn && this.hand.R.group.visible;
+    this.hand.L.web.visible = webOn && this.hand.L.group.visible;
     // the score breathes through the seams; ocean glows harder
-    const base = 0.10 + this.mode * 0.20;
-    this.jointMat.emissiveIntensity = base + level * 0.3;
-    this.cuff.material.emissiveIntensity = 1.1 + level * 1.4;
+    this.mats.joint.emissiveIntensity = 0.10 + this.mode * 0.20 + level * 0.3;
+    this.mats.cuff.emissiveIntensity = 1.1 + level * 1.4;
   }
 }

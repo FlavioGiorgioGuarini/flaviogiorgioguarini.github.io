@@ -8,6 +8,7 @@ import { I18N, LOCALES, VOICE, t, lang, setLang } from './i18n.js';
 import { AudioEngine } from './audio.js';
 import { detectQuality, Governor } from './quality.js';
 import { createGyro } from './sensors.js';
+import { createGestures } from './gestures.js';
 
 const $ = (s) => document.querySelector(s);
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -16,8 +17,9 @@ const Q = detectQuality();
 const state = {
   px: 0, py: 0,               // pointer parallax
   gx: 0, gy: 0,               // gyro parallax (smoothed here)
-  hand: null, handLive: false,
+  hand: null, handsLive: 0,
   scene: null, vision: null, bot: null, game: null, orbit: null,
+  art: null, games: null, fight: null,
   dwell: null, faceField: null, faceLoading: false,
   audio: new AudioEngine('assets/audio/dns-1.m4a'),
   ghost: { x: innerWidth / 2, y: innerHeight / 2, tx: innerWidth / 2, ty: innerHeight / 2 },
@@ -106,8 +108,15 @@ function closeGate() {
   gate.style.opacity = '0';
   document.body.classList.add('loaded');
   gyro.enable();  // user gesture: iOS grants or silently declines
-  setTimeout(() => { gate.hidden = true; }, 1400);
+  setTimeout(() => { gate.hidden = true; maybeGuide(); }, 1400);
 }
+
+/* first visit: a brief, quiet guide to the two-hand grammar */
+function maybeGuide(force = false) {
+  if (!force && localStorage.getItem('fgg-guide')) return;
+  import('./guide.js').then((m) => m.startGuide());
+}
+$('#ctl-help').addEventListener('click', () => maybeGuide(true));
 $('#enter-sound').addEventListener('click', async () => {
   closeGate();
   const ok = await state.audio.start(5);
@@ -152,15 +161,16 @@ addEventListener('pointermove', (e) => {
   if (!ghostSeen && !state.vision) { ghost.classList.add('on'); ghostSeen = true; }
 }, { passive: true });
 
-/* ---------- camera consent + hand tracking ---------- */
+/* ---------- camera consent + dual-hand tracking ---------- */
 const camCtl = $('#ctl-cam');
 const consent = $('#cam-consent');
+const VIS_MSG = { req: 'ui.visReq', retry: 'ui.visRetry', ready: 'ui.visReady' };
 
 camCtl.addEventListener('click', () => {
   if (state.vision) {
     state.vision.stop();
     state.vision = null;
-    state.handLive = false;
+    state.handsLive = 0;
     state.dwell?.hide();
     state.faceField?.setFace(null);
     camCtl.setAttribute('aria-pressed', 'false');
@@ -176,10 +186,11 @@ $('#cam-enable').addEventListener('click', async () => {
   try {
     const mod = await import('./vision.js');
     state.vision = await mod.startVision({
-      onHand,
+      onHands,
       onFace,
       face: Q.face,
-      onStatus: (msg) => { $('#game-status').textContent = msg; },
+      maxHands: Q.hands,
+      onStatus: (code) => { $('#game-status').textContent = t(VIS_MSG[code] ?? code); },
     });
     if (!state.dwell) {
       const dm = await import('./dwell.js');
@@ -196,47 +207,53 @@ $('#cam-enable').addEventListener('click', async () => {
   }
 });
 
-/* VR-style gestures. Open hand mirrors; fist flies; point dwells to click;
-   shaka dives the site; two secrets stay secret. */
+/* Dual-hand grammar. The gesture engine decides what the pair means;
+   this block only wires its verbs to the page. Two secrets stay secret. */
 const SECTIONS = [...document.querySelectorAll('main .section')];
-let lastJump = 0, lastHorns = 0, lastMiddle = 0, lastShaka = 0, lastPoke = 0;
 const sarcasm = $('#sarcasm');
 $('#sarcasm-close').addEventListener('click', () => { sarcasm.hidden = true; });
 
-function onHand(h) {
-  state.handLive = !!h;
-  if (!h) { state.dwell?.update(null); return; }
-  state.hand?.setPose(h);
-  const now = performance.now();
+/* middle finger = close whatever is front-most; sass only when idle */
+function closeFrontmost() {
+  if (state.games?.close?.()) return;
+  if (state.fight?.close?.()) return;
+  if (window.__guide?.close?.()) return;
+  const botPanel = $('#bot-panel');
+  if (botPanel && !botPanel.hidden) { state.bot?.togglePanel(); return; }
+  if (sarcasm.hidden) sarcasm.hidden = false;
+}
 
-  if (h.gesture === 'point') {
-    state.dwell?.update({ x: h.tip.x * innerWidth, y: h.tip.y * innerHeight }, now);
-  } else {
-    state.dwell?.update(null);
-  }
+/* symmetric palm spread = cinema view (chrome dissolves); close = return */
+function setImmersive(on) {
+  document.body.classList.toggle('immersive', on);
+}
 
-  if (h.gesture === 'shaka' && now - lastShaka > 8000) {
-    lastShaka = now;
-    toggleOcean();
-  } else if (h.gesture === 'horns' && now - lastHorns > 6000) {
-    lastHorns = now;
-    state.scene?.triggerWarp();
-  } else if (h.gesture === 'middle' && now - lastMiddle > 15000 && sarcasm.hidden) {
-    lastMiddle = now;
-    sarcasm.hidden = false;
-  } else if (!h.open && !h.gesture) {
-    if (Math.abs(h.dy) > 0.1) scrollBy({ top: h.dy * innerHeight * 0.14, behavior: 'instant' });
-    if (Math.abs(h.dx) > 1.0 && now - lastJump > 900) { lastJump = now; jumpSection(h.dx > 0 ? 1 : -1); }
-  }
-
-  // underwater, the hand rows the water
-  if (state.scene && state.scene.mix > 0.05) {
-    state.scene.setHand(h.x, h.y, h.speed);
-    if (h.speed > 0.5 && now - lastPoke > 130) {
-      lastPoke = now;
+const lastPokeAt = { L: 0, R: 0 };
+const gest = createGestures({
+  dwell: (pt, now) => state.dwell?.update(pt, now),
+  scroll: (dy) => scrollBy({ top: dy * innerHeight * 0.14, behavior: 'instant' }),
+  jump: (dir) => jumpSection(dir),
+  dive: () => toggleOcean(),
+  warp: () => state.scene?.triggerWarp(),
+  middle: () => closeFrontmost(),
+  immersive: setImmersive,
+  portal: (phase, scale) => state.scene?.setPortal(phase === 'move' ? scale : 1),
+  stir: (h, i) => {
+    if (!state.scene || state.scene.mix <= 0.05) return;
+    state.scene.setHand(i, h.x, h.y, h.speed);
+    const now = performance.now();
+    if (h.speed > 0.5 && now - lastPokeAt[h.uid] > 130) {
+      lastPokeAt[h.uid] = now;
       state.scene.pokeWater(h.x, h.y, Math.min(0.25 + h.speed * 0.3, 1.1));
     }
-  }
+  },
+});
+
+function onHands(hands, now) {
+  state.handsLive = hands.length;
+  state.hand?.setHands(hands);
+  gest.feed(hands, now);
+  state.art?.setHands?.(hands);
 }
 
 function onFace(f) {
@@ -275,6 +292,9 @@ const io = new IntersectionObserver((entries) => {
       rail.forEach((a, i) => a.setAttribute('aria-current', String(i === idx)));
       if (en.target.id === 'arcade' && !state.game) {
         import('./game.js').then((m) => { state.game = m.startGame($('#game')); });
+      }
+      if (en.target.id === 'atelier' && !state.art) {
+        import('./art.js').then((m) => { state.art = m.startArt($('#art')); });
       }
       if (en.target.id === 'moon' && !window.__ctf) {
         window.__ctf = true;
@@ -425,6 +445,23 @@ if (matchMedia('(pointer: fine)').matches && !reduced) {
 const pimg = $('#portrait-img');
 pimg?.addEventListener('load', () => { $('#portrait').hidden = false; });
 
+/* ---------- game deck: two arcade cabinets at the end of the site ---------- */
+const themeOf = () => (state.scene && state.scene.mix > 0.5 ? 'ocean' : 'space');
+$('#play-runner')?.addEventListener('click', async () => {
+  if (!state.games) {
+    const m = await import('./games.js');
+    state.games = m.createRunner(themeOf);
+  }
+  state.games.open();
+});
+$('#play-fight')?.addEventListener('click', async () => {
+  if (!state.fight) {
+    const m = await import('./fight.js');
+    state.fight = m.createFight(themeOf);
+  }
+  state.fight.open();
+});
+
 /* ---------- robot companion (lazy) ---------- */
 $('#bot-toggle').addEventListener('click', async () => {
   if (!state.bot) {
@@ -435,12 +472,16 @@ $('#bot-toggle').addEventListener('click', async () => {
 });
 import('./bot.js').then((m) => { if (!state.bot) state.bot = m.startBot({ canvas: $('#bot-canvas') }); });
 
-/* ---------- scene + cockpit hand + main loop ---------- */
+/* ---------- scene + cockpit hand pair + main loop ---------- */
 import('./scene.js').then(async ({ DeepField }) => {
   state.scene = new DeepField($('#stage'), { reduced, quality: Q });
-  const { Hand3D } = await import('./hand3d.js');
-  state.hand = new Hand3D(state.scene.camera);
+  const { Hands3D } = await import('./hand3d.js');
+  state.hand = new Hands3D(state.scene.camera);
   state.scene.scene.add(state.scene.camera);
+  // decorative life (rockets, koi, easter eggs): never on the reduced path
+  if (!reduced) {
+    import('./extras.js').then((m) => { state.scene.extras = m.createExtras(state.scene, Q); });
+  }
 });
 
 /* resize guard: mobile URL-bar collapse fires resize with same width —
@@ -463,7 +504,11 @@ const governor = new Governor((step) => {
   if (!state.scene) return;
   if (step === 1) state.scene.setDprCap(Math.max(1, Q.dprCap - 0.3));
   if (step === 2) state.scene.setDust(false);
-  if (step === 3) { state.vision?.setFace(false); state.faceField?.setEnabled(false); }
+  if (step === 3) {
+    state.vision?.setFace(false);
+    state.faceField?.setEnabled(false);
+    state.vision?.setMaxHands(1);   // dual-hand degrades before the world does
+  }
   if (step === 4) { state.scene.setStarFrac(0.55); grainMs = 400; }
 });
 
@@ -487,7 +532,7 @@ function loop(now) {
     state.hand?.setMode(state.scene.mix);
   }
   if (state.hand) {
-    if (!state.handLive) state.hand.setIdle(now / 1000, px, py);
+    if (!state.handsLive) state.hand.setIdle(now / 1000, px, py);
     state.hand.update(dt, state.audio.level);
   }
   state.faceField?.frame(dt, state.audio.mid, state.scene ? state.scene.mix : 0);
