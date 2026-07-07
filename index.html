@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; font-src 'self'; media-src 'self'; connect-src 'self' https://formsubmit.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <title>Flavio Giorgio Guarini — Security · Sound · Systems</title>
-<meta name="description" content="A live 3D portfolio: cybersecurity (TryHackMe top 3%), original score DNS_1 driving the scene, real-time hand tracking, an underwater Ocean Mode, a moon riddle. Six languages.">
+<meta name="description" content="A live 3D portfolio steered with both hands: cybersecurity (TryHackMe top 3%), original score DNS_1 driving the scene, dual-hand tracking, an underwater Ocean Mode with koi and a jellyfish companion, arcade games, a moon riddle. Six languages.">
 <link rel="canonical" href="https://flaviogiorgioguarini.github.io/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Flavio Giorgio Guarini — Toward the Stars">
-<meta property="og:description" content="Security by discipline, sound by instinct. A portfolio you enter, hear, and steer with your hand.">
+<meta property="og:title" content="Flavio Giorgio Guarini — Into the Deep">
+<meta property="og:description" content="Security by discipline, sound by instinct. A portfolio you enter, hear, and steer with both hands.">
 <meta property="og:url" content="https://flaviogiorgioguarini.github.io/">
 <meta property="og:image" content="https://flaviogiorgioguarini.github.io/assets/img/og-image.jpg">
 <meta name="twitter:card" content="summary_large_image">
@@ -85,6 +85,9 @@
     <button class="ctl" id="ctl-dive" aria-pressed="false" data-i18n-aria="ui.diveLabel" title="Ocean mode">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2.5 9.5c2.1-2.4 4.2-2.4 6.3 0s4.2 2.4 6.3 0 4.2-2.4 6.3 0"/><path d="M2.5 15.5c2.1-2.4 4.2-2.4 6.3 0s4.2 2.4 6.3 0 4.2-2.4 6.3 0"/></svg>
     </button>
+    <button class="ctl" id="ctl-help" data-i18n-aria="ui.helpLabel" title="How to steer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M9 9.2a3 3 0 1 1 4.6 2.5c-1 .7-1.6 1.2-1.6 2.3v.5"/><circle cx="12" cy="18" r="0.6" fill="currentColor"/></svg>
+    </button>
   </div>
 </header>
 
@@ -95,8 +98,9 @@
     <li><a href="#payload"><span class="lbl" data-i18n="ui.rail.2">Payload</span><span class="dot"></span></a></li>
     <li><a href="#systems"><span class="lbl" data-i18n="ui.rail.3">Systems</span><span class="dot"></span></a></li>
     <li><a href="#arcade"><span class="lbl" data-i18n="ui.rail.4">Arcade</span><span class="dot"></span></a></li>
-    <li><a href="#moon"><span class="lbl" data-i18n="ui.rail.5">Moon</span><span class="dot"></span></a></li>
-    <li><a href="#contact"><span class="lbl" data-i18n="ui.rail.6">Contact</span><span class="dot"></span></a></li>
+    <li><a href="#atelier"><span class="lbl" data-i18n="ui.rail.5">Atelier</span><span class="dot"></span></a></li>
+    <li><a href="#moon"><span class="lbl" data-i18n="ui.rail.6">Moon</span><span class="dot"></span></a></li>
+    <li><a href="#contact"><span class="lbl" data-i18n="ui.rail.7">Contact</span><span class="dot"></span></a></li>
   </ul>
 </nav>
 
@@ -185,6 +189,24 @@
     </div>
   </section>
 
+  <!-- ATELIER -->
+  <section class="section" id="atelier" aria-label="Hand atelier">
+    <div class="section__inner">
+      <h2 class="display display--section"><span data-i18n="sections.atelierT1">The hand</span><br><span data-i18n="sections.atelierT2">atelier</span></h2>
+      <p class="lead sub-lead" data-i18n="sections.atelierLead"></p>
+      <div class="art-frame">
+        <canvas id="art" aria-label="Freeform light-painting canvas. Draw with pointer or touch; with the camera on, pinch either hand to paint."></canvas>
+      </div>
+      <div class="game-hud">
+        <p class="small" id="art-status" data-i18n="ui.artHint"></p>
+        <div class="art-actions">
+          <button class="btn btn--quiet" id="art-reset" data-i18n="ui.artReset">Reset</button>
+          <button class="btn" id="art-save" data-i18n="ui.artSave">Save · JPG</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- MOON -->
   <section class="section" id="moon" aria-label="CTF challenge">
     <div class="section__inner split">
@@ -238,6 +260,13 @@
         </a>
       </div>
       <p class="links-row" id="contact-links"><!-- rendered --></p>
+      <div class="deck">
+        <p class="serif-line deck-serif" data-i18n="sections.deckSerif"></p>
+        <div class="deck-btns">
+          <button class="btn btn--solid" id="play-runner"><span data-i18n="ui.play">Play</span> · <span data-i18n="ui.playName">Deep Runner</span></button>
+          <button class="btn" id="play-fight"><span data-i18n="ui.fightVerb">Fight</span> · <span data-i18n="ui.fightName">You vs the Larpers</span></button>
+        </div>
+      </div>
       <p class="small foot-note"><span data-i18n="sections.footNote"></span> © <span id="yr">2026</span> Flavio Giorgio Guarini.</p>
     </div>
   </section>

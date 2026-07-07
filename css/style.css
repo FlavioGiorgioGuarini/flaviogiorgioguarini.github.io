@@ -717,6 +717,128 @@ body.loaded .hl + .hl { transition-delay: 0.18s; }
   .topbar__controls { gap: 7px; }
 }
 
+/* ---------- Immersive view (symmetric palm spread) ---------- */
+.topbar, .rail, .bot__toggle {
+  transition: opacity 700ms var(--ease-cine);
+}
+body.immersive .topbar,
+body.immersive .rail,
+body.immersive .bot__toggle {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---------- The hand atelier ---------- */
+.art-frame {
+  position: relative;
+  margin-top: 36px;
+  border: 1px solid var(--line-strong);
+  background: rgba(3, 4, 8, 0.4);
+  box-shadow: 0 0 60px -20px rgba(0, 0, 0, 0.9);
+}
+.art-frame canvas {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  cursor: crosshair;
+  touch-action: none;
+  display: block;
+}
+.art-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+/* ---------- Game deck (end of site) ---------- */
+.deck { margin-top: 56px; }
+.deck-serif { font-size: clamp(1.05rem, 2vw, 1.3rem); }
+.deck-btns { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 22px; }
+
+/* ---------- Full-screen arcade layers ---------- */
+.layer {
+  position: fixed; inset: 0; z-index: 160;
+  display: flex; flex-direction: column; align-items: center;
+  background: rgba(2, 3, 6, 0.94);
+  backdrop-filter: blur(10px);
+  padding: 14px clamp(12px, 3vw, 40px) 20px;
+}
+.layer[hidden] { display: none; }
+.layer__bar {
+  width: 100%; max-width: 900px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 14px; margin-bottom: 12px;
+}
+.layer__bar .tag { letter-spacing: 0.24em; }
+.layer__stage {
+  position: relative;
+  flex: 1; min-height: 0;
+  display: flex; align-items: center; justify-content: center;
+  width: 100%;
+}
+.layer__stage canvas {
+  max-width: min(100%, 62vh);
+  max-height: 100%;
+  border: 1px solid var(--line-strong);
+  background: #000;
+  image-rendering: pixelated;
+  touch-action: none;
+}
+.layer__stage--wide canvas { max-width: min(100%, 900px); max-height: 100%; }
+.layer__hint { margin: 10px 0 0; text-align: center; }
+.layer__msg {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  padding: 26px 34px;
+  text-align: center;
+  max-width: min(420px, 88vw);
+}
+.layer__msg h3 {
+  font-family: var(--font-display); font-weight: 400;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--ink); margin: 8px 0 6px; font-size: 1.05rem;
+}
+.layer__msg .btn { margin-top: 18px; }
+
+/* ---------- Starting guide ---------- */
+#guide {
+  position: fixed; left: 0; right: 0;
+  bottom: clamp(16px, 5vh, 44px);
+  z-index: 140;
+  display: flex; justify-content: center;
+  padding: 0 16px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 600ms var(--ease-cine), transform 600ms var(--ease-cine);
+}
+#guide.on { opacity: 1; transform: none; }
+.guide__card {
+  pointer-events: auto;
+  max-width: 520px; width: 100%;
+  padding: 22px 26px 18px;
+}
+.guide__card h3 {
+  font-family: var(--font-display); font-weight: 400;
+  font-size: 0.95rem; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--ink); margin: 8px 0 6px;
+}
+.guide__card .small { margin: 0; min-height: 3.2em; }
+.guide__row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-top: 14px; flex-wrap: wrap;
+}
+.guide__dots { display: inline-flex; gap: 7px; }
+.guide__dots i {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--ink-faint);
+  transition: background var(--t-fast), box-shadow var(--t-fast);
+}
+.guide__dots i.on { background: var(--teal); box-shadow: 0 0 10px 1px var(--teal-glow); }
+.guide__btns { display: inline-flex; gap: 10px; }
+.guide__btns .btn { padding: 10px 18px; }
+
+@media (max-width: 560px) {
+  .layer__msg { padding: 20px; }
+  .guide__card .small { min-height: 4.4em; }
+}
+
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
