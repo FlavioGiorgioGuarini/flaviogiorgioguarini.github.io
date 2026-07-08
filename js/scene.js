@@ -121,8 +121,23 @@ export class DeepField {
     this.sectionCount = 8;
     this.scrollY = 0;
     this.targetScroll = 0;
+    this.onFoamPeak = null;  // app flips the CSS skin exactly at the foam line
     this.shake = 0;
     this.warp = 0;
+
+    /* per-station camera language: dolly, fov and gaze per chapter.
+       Sampled by the eased station coordinate — the descent is directed,
+       not an elevator. Index = rail anchor order. */
+    this.camRail = [
+      { z: 26, fov: 58, lx: 0,  ly: 0 },   // 0 signal
+      { z: 25, fov: 57, lx: -2, ly: -2 },  // 1 descent log
+      { z: 27, fov: 60, lx: 2,  ly: -1 },  // 2 payload
+      { z: 24, fov: 56, lx: -3, ly: 1 },   // 3 systems
+      { z: 26, fov: 58, lx: 0,  ly: 0 },   // 4 arcade
+      { z: 25, fov: 57, lx: 3,  ly: 0 },   // 5 atelier
+      { z: 30, fov: 54, lx: 0,  ly: 3 },   // 6 moon: pull back, look up
+      { z: 26, fov: 61, lx: 0,  ly: -2 },  // 7 contact: wide on the floor
+    ];
     this.portal = 1;         // bi-pinch world-scale flourish, eased
     this.portalT = 1;
     this.extras = null;      // lazy: rockets, koi, easter eggs, glyphs
@@ -134,7 +149,7 @@ export class DeepField {
     this.trans = null;       // {t0, dir}
     this.DUR = reduced ? 1.0 : 2.8;
 
-    this._fbm = fbmField(512);
+    this._fbm = fbmField(256);
     this._fogA = new THREE.Color(0x030408);
     this._fogB = new THREE.Color(0x04222d);
     this._colTmp = new THREE.Color();
@@ -148,9 +163,33 @@ export class DeepField {
     this._buildMoon();
     this._buildRibbon();
     this._buildSlabs();
+    this._buildFoam();
+    this.resize();
+
+    /* the ocean world is heavy and invisible at boot: the group exists now
+       (extras attach koi to it immediately) but its contents are built in
+       an idle moment (or on first dive), never on the critical path */
+    this.ocean = new THREE.Group();
+    this.ocean.visible = false;
+    this.scene.add(this.ocean);
+    this.sub = new THREE.Group();
+    this.sub.visible = false;
+    this.scene.add(this.sub);
+    this._waterBuilt = false;
+    this.rip = [];
+    (window.requestIdleCallback || ((f) => setTimeout(f, 1200)))(() => this._buildWater());
+
+    /* context loss: three restores programs, but the PMREM env is a render
+       target — rebuild it or every PBR surface comes back matte black */
+    canvas.addEventListener('webglcontextlost', (e) => e.preventDefault());
+    canvas.addEventListener('webglcontextrestored', () => { this._buildEnv(); this.resize(); });
+  }
+
+  _buildWater() {
+    if (this._waterBuilt) return;
+    this._waterBuilt = true;
     this._buildOcean();
     this._buildSubmarine();
-    this._buildFoam();
     this.resize();
   }
 
@@ -177,7 +216,8 @@ export class DeepField {
     panel(0x59e8d5, 2.2, 16, -4, -10, 12, 22);  // teal rim
     panel(0x8fa3b8, 1.2, 4, -16, 12, 20, 8);    // cool floor bounce
     const pm = new THREE.PMREMGenerator(this.renderer);
-    this.scene.environment = pm.fromScene(es, 0.045).texture;
+    // sigma 0.038 stays inside the 20-sample blur budget (0.045 clipped)
+    this.scene.environment = pm.fromScene(es, 0.038).texture;
     this.scene.environmentIntensity = 0.55;
     pm.dispose();
     es.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); });
@@ -202,23 +242,23 @@ export class DeepField {
     geo.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
     geo.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
     this.starN = N;
-    this.starU = { uTime: { value: 0 }, uMid: { value: 0 }, uLevel: { value: 0 }, uPix: { value: 1 }, uWarp: { value: 0 }, uFade: { value: 1 } };
+    this.starU = { uTime: { value: 0 }, uMid: { value: 0 }, uLevel: { value: 0 }, uPix: { value: 1 }, uWarp: { value: 0 }, uFade: { value: 1 }, uStretch: { value: 0 } };
     const mat = new THREE.ShaderMaterial({
       uniforms: this.starU,
       transparent: true, depthWrite: false,
       blending: THREE.AdditiveBlending,
       vertexShader: `
         attribute float aSize; attribute float aSeed;
-        uniform float uTime, uMid, uLevel, uPix, uWarp;
+        uniform float uTime, uMid, uLevel, uPix, uWarp, uStretch;
         varying float vA; varying float vSeed;
         void main(){
           vec3 p = position;
           p.z = mix(p.z, mod(p.z + uTime * 260.0 * uWarp, 300.0) - 240.0, step(0.001, uWarp));
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
           float tw = sin(uTime * (0.5 + aSeed * 2.4) + aSeed * 6.2831) * 0.5 + 0.5;
-          vA = mix(0.35, 1.0, tw * (0.4 + uMid * 1.4)) + uWarp * 0.5;
+          vA = mix(0.35, 1.0, tw * (0.4 + uMid * 1.4)) + uWarp * 0.5 + uStretch * 0.3;
           vSeed = aSeed;
-          gl_PointSize = aSize * (1.0 + uLevel * 1.1 + uWarp * 2.4) * uPix * (160.0 / -mv.z);
+          gl_PointSize = aSize * (1.0 + uLevel * 1.1 + uWarp * 2.4 + uStretch * 1.6) * uPix * (160.0 / -mv.z);
           gl_Position = projectionMatrix * mv;
         }`,
       fragmentShader: `
@@ -325,7 +365,9 @@ export class DeepField {
       envMapIntensity: 0.25,
     });
     this.moon = new THREE.Mesh(new THREE.SphereGeometry(8.5, 128, 128), mat);
-    this.moonHome = new THREE.Vector3(11, -132, -18);
+    /* station 6 (camera y −156): the full disc composed upper-centre,
+       looking back up at it through the water — never clipped again */
+    this.moonHome = new THREE.Vector3(1.5, -146, -36);
     this.moon.position.copy(this.moonHome);
     this.scene.add(this.moon);
 
@@ -391,17 +433,16 @@ export class DeepField {
       slab.rotation.y = i * 0.5;
       this.slabs.add(slab);
     }
-    this.slabs.position.set(9, -54, -16);
+    /* staged on the beat between journey and payload: the interstitial's
+       hero object, on the camera path instead of off in the wings */
+    this.slabs.position.set(2, -44, -10);
+    this.slabs.scale.setScalar(1.9);
     this.scene.add(this.slabs);
   }
 
   /* ---------------- OCEAN ---------------- */
 
   _buildOcean() {
-    this.ocean = new THREE.Group();
-    this.ocean.visible = false;
-    this.scene.add(this.ocean);
-
     /* living surface, seen from below; ripple ring buffer fed by the hand */
     this.rip = Array.from({ length: RIPPLES }, () => new THREE.Vector4(0, 0, -100, 0));
     this.ripI = 0;
@@ -627,7 +668,7 @@ export class DeepField {
 
   /* dark-steel patrol submarine; replaces the moon underwater */
   _buildSubmarine() {
-    const g = new THREE.Group();
+    const g = this.sub; // group exists from boot so extras can attach early
     /* anechoic tile pattern: a quiet bump grid with a few missing tiles,
        the detail that makes a hull read as engineered instead of extruded */
     const tiles = (() => {
@@ -781,9 +822,6 @@ export class DeepField {
     g.position.copy(this.moonHome);
     g.rotation.y = -0.45;
     g.scale.setScalar(0.001);
-    g.visible = false;
-    this.sub = g;
-    this.scene.add(g);
   }
 
   /* camera-locked foam sweep: the visible act of submersion */
@@ -834,10 +872,12 @@ export class DeepField {
 
   toggleMode() {
     if (this.trans) return null;
+    if (!this._waterBuilt) this._buildWater(); // first dive before idle build fired
     const next = this.mode === 'space' ? 'ocean' : 'space';
-    this.trans = { t0: this.t, dir: next === 'ocean' ? 1 : 0 };
+    this.trans = { t0: this.t, dir: next === 'ocean' ? 1 : 0, peaked: false };
     this.mode = next;
-    this.foam.visible = true;
+    /* reduced motion: no full-screen animated wipe — a plain crossfade */
+    this.foam.visible = !this.reduced;
     this.ocean.visible = true;
     this.sub.visible = true;
     return next;
@@ -846,12 +886,14 @@ export class DeepField {
   /* hand → water. nx/ny are mirrored screen coords 0..1; top of the
      screen maps to far water, bottom to the water just overhead */
   pokeWater(nx, ny, amp = 0.5) {
+    if (!this.rip.length) return;
     const v = this.rip[this.ripI = (this.ripI + 1) % RIPPLES];
     v.set((nx - 0.5) * 64, -64 + ny * 76, this.t, Math.min(amp, 1.2));
   }
 
   /* continuous hand presence for bubbles (world-approximate); i = 0 | 1 */
   setHand(i, nx, ny, speed) {
+    if (!this.bubU) return;
     const h = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * 14;
     const w = h * this.camera.aspect;
     const u = i === 1 ? this.bubU.uHand2 : this.bubU.uHand;
@@ -872,7 +914,7 @@ export class DeepField {
   setDprCap(v) { this.dprCap = v; this.resize(); }
   setDust(on) {
     if (this.dust) this.dust.visible = on;
-    this.snow.visible = on;
+    if (this.snow) this.snow.visible = on;
   }
   setStarFrac(f) {
     this.stars.geometry.setDrawRange(0, Math.floor(this.starN * f));
@@ -881,6 +923,14 @@ export class DeepField {
   setScroll(progress) {
     this.targetScroll = progress * (this.sectionCount - 1);
   }
+
+  /* station-space scroll: u = 0..7 measured against the real DOM anchors,
+     so landmarks (moon, ribbon, slabs) land exactly on their chapters */
+  setStationScroll(u) {
+    this.targetScroll = u;
+  }
+
+  setStations() { /* stations arrive pre-mapped via setStationScroll */ }
 
   resize() {
     const w = innerWidth, h = innerHeight;
@@ -894,8 +944,8 @@ export class DeepField {
     this.foam.scale.set(2.4 * this.camera.aspect, 2.4, 1);
     this.starU.uPix.value = pix;
     if (this.dustU) this.dustU.uPix.value = pix;
-    this.snowU.uPix.value = pix;
-    this.bubU.uPix.value = pix;
+    if (this.snowU) this.snowU.uPix.value = pix;
+    if (this.bubU) this.bubU.uPix.value = pix;
   }
 
   frame(dt, audio, input) {
@@ -911,6 +961,12 @@ export class DeepField {
       this.foamU.uProg.value = p;
       this.foamU.uDir.value = this.trans.dir;
       this.foamU.uTime.value = this.t;
+      /* the foam line crosses mid-screen at p ≈ 0.41 (line = −0.18 + p·1.36):
+         that exact moment flips the CSS skin and sinks the score */
+      if (!this.trans.peaked && p >= 0.41) {
+        this.trans.peaked = true;
+        this.onFoamPeak?.(this.trans.dir === 1);
+      }
       if (p >= 1) {
         this.mix = this.trans.dir;
         this.trans = null;
@@ -920,24 +976,32 @@ export class DeepField {
     }
     const mix = this.mix;
     const space = 1 - mix;
+    /* vt: visual time. Under reduced motion the decorative world holds
+       still — only real state changes (scroll, dive) move the frame */
+    const vt = calm ? 0 : this.t;
+    const depth01 = this.scrollY / (this.sectionCount - 1); // 0 surface → 1 the Pit
 
     // uniforms
-    this.starU.uTime.value = this.t;
-    this.starU.uMid.value = calm ? 0.12 : mid;
+    this.starU.uTime.value = vt;
+    this.starU.uMid.value = calm ? 0 : mid;
     this.starU.uLevel.value = calm ? 0 : level;
-    this.starU.uFade.value = space;
+    this.starU.uFade.value = space * (1 - depth01 * 0.3);
+    /* scroll velocity stretches the field — speed you can see */
+    const vel = Math.min(Math.abs(this.targetScroll - this.scrollY) * 0.55, 0.5);
+    this.starU.uStretch.value = calm ? 0 : vel;
     this.stars.visible = space > 0.01;
-    this.milky.material.opacity = 0.10 * space;
+    this.milky.material.opacity = 0.10 * space * (1 - depth01 * 0.5);
     this.milky.visible = space > 0.01;
     if (this.dustU) {
-      this.dustU.uTime.value = this.t;
+      this.dustU.uTime.value = vt;
       this.dustU.uBass.value = calm ? 0 : bass;
       this.dustU.uFade.value = space;
     }
 
-    // fog + clear color breathe between worlds
+    // depth grades the atmosphere: thicker, darker, heavier on the way down
     this.scene.fog.color.copy(this._fogA).lerp(this._fogB, mix);
-    this.scene.fog.density = 0.0115 + mix * 0.017;
+    this.scene.fog.density = 0.0115 + depth01 * 0.005 + mix * (0.017 + depth01 * 0.012);
+    this.renderer.toneMappingExposure = 1.08 - depth01 * (0.10 + mix * 0.16);
     this.renderer.setClearColor(this.scene.fog.color, 1);
 
     // lights crossfade
@@ -951,27 +1015,31 @@ export class DeepField {
     // nebulae idle near-black, flare with the score; tinted aqua underwater
     this.portal += (this.portalT - this.portal) * Math.min(dt * 6, 1);
     if (!calm) {
-      const nScale = 1 - mix * 0.45;
+      const nScale = (1 - mix * 0.45) * (1 - depth01 * 0.35);
       this.nebulae[0].material.opacity = (0.055 + mid * 0.22) * nScale;
       this.nebulae[1].material.opacity = (0.045 + bass * 0.26) * nScale;
       this.nebulae[2].material.opacity = (0.05 + level * 0.18) * nScale;
-      const fov = 58 + bass * 2.4 + this.warp * 16 + mix * 2 - (this.portal - 1) * 14;
-      if (Math.abs(fov - this.camera.fov) > 0.08) {
-        this.camera.fov = fov;
-        this.camera.updateProjectionMatrix();
-      }
     }
     this.nebulae.forEach((n) => {
       n.material.color.copy(this._colTmp.setHex(0xffffff)).lerp(this._colTmp2.setHex(0x6fd8e8), mix);
     });
 
-    // camera travels down the field with scroll, drifts on a slow figure
-    this.scrollY += (this.targetScroll - this.scrollY) * (calm ? 1 : 0.06);
+    // camera rides the rail down the field: per-station dolly, fov and gaze
+    // (time-corrected smoothing: identical feel at 60 and 120 Hz)
+    this.scrollY += (this.targetScroll - this.scrollY) * (calm ? 1 : 1 - Math.exp(-dt * 4.2));
     const y = -this.scrollY * 26;
+    const si = Math.max(0, Math.min(this.camRail.length - 2, Math.floor(this.scrollY)));
+    const sf = easeInOut(Math.max(0, Math.min(1, this.scrollY - si)));
+    const A = this.camRail[si], B = this.camRail[si + 1];
+    const railZ = A.z + (B.z - A.z) * sf;
+    const railFov = A.fov + (B.fov - A.fov) * sf;
+    const railLx = A.lx + (B.lx - A.lx) * sf;
+    const railLy = A.ly + (B.ly - A.ly) * sf;
+
     const driftX = calm ? 0 : Math.sin(this.t * 0.05) * 1.6;
     const driftY = calm ? 0 : Math.cos(this.t * 0.04) * 1.1;
     if (!calm && bass > 0.62) this.shake = Math.min(this.shake + (bass - 0.62) * 0.5 * (1 - mix * 0.6), 0.6);
-    this.shake *= 0.9;
+    this.shake *= Math.exp(-dt * 6.3);
     const sx = (Math.random() - 0.5) * this.shake;
     const sy = (Math.random() - 0.5) * this.shake;
 
@@ -981,27 +1049,41 @@ export class DeepField {
 
     this.camera.position.x = driftX + input.px * 2.2 + sx + swayX;
     this.camera.position.y = y + driftY + input.py * 1.4 + sy + swayY;
-    this.camera.position.z = 26;
-    this.camera.lookAt(driftX * 0.4 + input.px * 4, y + input.py * 2.5, -30);
+    this.camera.position.z = railZ;
+    this.camera.lookAt(railLx + driftX * 0.4 + input.px * 4, y + railLy + input.py * 2.5, -30);
 
-    this.warp *= 0.975;
+    this.warp *= Math.exp(-dt * 1.5);
     if (this.warp < 0.003) this.warp = 0;
     this.starU.uWarp.value = this.warp;
 
-    // moon ↔ submarine at the same station
-    const moonFocus = Math.max(0, 1 - Math.abs(this.scrollY - 5) * 1.2);
+    // fov = rail base + the score breathing + warp + portal flourish
+    const fov = railFov + (calm ? 0 : bass * 2.4 + this.warp * 16 + mix * 2 - (this.portal - 1) * 14);
+    if (Math.abs(fov - this.camera.fov) > 0.08) {
+      this.camera.fov = fov;
+      this.camera.updateProjectionMatrix();
+    }
+
+    // moon ↔ submarine at station 6 (the CTF chapter, measured, not guessed)
+    const moonFocus = Math.max(0, 1 - Math.abs(this.scrollY - 6) * 1.2);
     const moonScale = (1 + (calm ? 0 : bass * 0.045)) * Math.max(space, 0.001);
     this.moon.visible = space > 0.02;
     this.moonHalo.visible = this.moon.visible;
     if (this.moon.visible) {
-      this.moon.rotation.y += dt * 0.03;
+      if (!calm) this.moon.rotation.y += dt * 0.03;
       this.moon.rotation.x = input.py * 0.3 * moonFocus;
       this.moon.rotation.z = input.px * 0.2 * moonFocus;
       this.moon.scale.setScalar(moonScale);
-      this.moon.position.x = this.moonHome.x - moonFocus * 4;
+      this.moon.position.x = this.moonHome.x - moonFocus * 2;
+      /* the moon rises into frame only at its own station — waiting below
+         the fold on the way down, exiting overhead once you sink past her */
+      const side = this.scrollY > 6 ? -1 : 1;
+      this.moon.position.y = this.moonHome.y - side * (1 - moonFocus) * 14;
+      this.moonHalo.position.y = this.moon.position.y + 0.5;
       this.moonHalo.material.opacity = 0.10 * space * (0.7 + level * 0.5);
+      // the key light swells as you arrive: her one full-bleed moment
+      this.key.intensity = (2.6 - mix * 0.7) + moonFocus * 0.9 * space;
     }
-    if (this.sub.visible) {
+    if (this.sub && this.sub.visible) {
       const s = Math.max(mix, 0.001) * 1.04;
       this.sub.scale.setScalar(s);
       this.sub.position.y = this.moonHome.y + Math.sin(this.t * 0.4) * 0.9 * mix;
@@ -1013,8 +1095,8 @@ export class DeepField {
       this.beamMat.uniforms.uOp.value = 0.10 * mix * (0.8 + mid * 0.5);
     }
 
-    // trajectory ribbon draws itself across the journey section
-    const jp = Math.min(Math.max((this.scrollY - 0.55) / 1.6, 0), 1);
+    // trajectory ribbon draws itself across the descent log (stations 1→2)
+    const jp = Math.min(Math.max((this.scrollY - 0.7) / 1.3, 0), 1);
     this.ribbon.geometry.setDrawRange(0, Math.floor(161 * jp));
     this.ribbonDots.forEach((d, i) => {
       d.visible = jp > (i + 0.5) / 9;
@@ -1022,58 +1104,64 @@ export class DeepField {
     });
 
     // payload slabs: slow drift, edges flare with the mids
-    this.slabs.rotation.y = this.t * 0.1;
+    this.slabs.rotation.y = vt * 0.1;
     this.slabs.children.forEach((s, i) => {
-      s.rotation.y += dt * (0.12 + i * 0.05);
-      s.position.y = (i - 1) * 0.5 + Math.sin(this.t * 0.7 + i * 2.1) * 0.35;
+      if (!calm) s.rotation.y += dt * (0.12 + i * 0.05);
+      s.position.y = (i - 1) * 0.5 + Math.sin(vt * 0.7 + i * 2.1) * 0.35;
       s.children[0].material.opacity = 0.28 + (calm ? 0 : mid * 0.5);
     });
 
-    // nebulae + milky way follow the camera loosely
+    /* parallax strata: the far layers lag the camera so travel is FELT —
+       following 1:1 was why the v8 descent looked like a still frame */
     this.nebulae.forEach((n) => {
       n.userData.oy ??= n.position.y;
-      n.position.y = n.userData.oy + y * 0.82;
+      n.position.y = n.userData.oy + y * 0.55;
     });
-    this.milky.position.y = 30 + y * 0.95;
+    this.milky.position.y = 30 + y * 0.85;
     if (this.dust) this.dust.position.y = y;
 
-    /* ---- ocean world ---- */
-    if (this.ocean.visible) {
+    /* ---- ocean world: world-anchored strata, so the dive is real ----
+       The surface stays overhead at the top of the page and recedes as you
+       sink; the seabed waits at the Pit and rises to meet the contact
+       section. Snow and bubbles are ambient — they ride with the camera. */
+    if (this.surfU && this.ocean.visible) {
       const oceanOp = mix;
-      this.surfU.uTime.value = this.t;
+      const surfProx = Math.max(0, 1 - this.scrollY / 3.2); // 1 at surface, 0 by mid-dive
+      this.surfU.uTime.value = vt;
       this.surfU.uOp.value = 0.5 * oceanOp;
       this.surfU.uMid.value = calm ? 0.1 : mid;
       this.surfU.uCur.value.set(cur.x, cur.y);
-      this.surface.position.y = y + 19;
+      this.surface.position.y = 19;
 
-      this.rays.forEach((r, i) => {
-        r.material.uniforms.uTime.value = this.t;
-        // squared fade: rays bloom only once the water has settled
-        r.material.uniforms.uOp.value = (0.05 + mid * 0.10) * oceanOp * oceanOp;
-        r.position.y = y + 17 - 22;
-        r.position.x = r.userData.x0 + Math.sin(this.t * 0.12 + r.userData.sway) * 3 + cur.x * 7;
-        r.rotation.z = Math.sin(this.t * 0.10 + r.userData.sway) * 0.05 + cur.x * 0.08;
+      this.rays.forEach((r) => {
+        r.material.uniforms.uTime.value = vt;
+        // squared fade + depth: rays live near the surface and die in the murk
+        r.material.uniforms.uOp.value = (0.05 + mid * 0.10) * oceanOp * oceanOp * (0.15 + 0.85 * surfProx);
+        r.position.y = -5;
+        r.position.x = r.userData.x0 + Math.sin(vt * 0.12 + r.userData.sway) * 3 + cur.x * 7;
+        r.rotation.z = Math.sin(vt * 0.10 + r.userData.sway) * 0.05 + cur.x * 0.08;
       });
 
       this.bed.material.opacity = oceanOp;
-      this.bed.position.y = y - 26;
-      this.caustics.position.y = y - 25.4;
-      this.causU.uTime.value = this.t;
+      this.bed.position.y = -208;
+      this.caustics.position.y = -207.4;
+      this.causU.uTime.value = vt;
       this.causU.uOp.value = (0.10 + bass * 0.08) * oceanOp * oceanOp;
 
-      this.snowU.uTime.value = this.t;
+      this.snowU.uTime.value = vt;
       this.snowU.uFade.value = oceanOp;
       this.snowU.uCur.value.set(cur.x, cur.y);
       this.snow.position.y = y;
 
-      this.bubU.uTime.value = this.t;
+      this.bubU.uTime.value = vt;
       this.bubU.uFade.value = oceanOp;
-      this.bubU.uBurst.value *= 0.94;
+      this.bubU.uBurst.value *= Math.exp(-dt * 3.7);
       this.bubbles.position.y = y;
     }
 
-    /* lazy layer: rockets, koi school, easter eggs, timeline glyphs */
-    this.extras?.frame(dt, audio || {}, this, y);
+    /* lazy layer: rockets, koi school, easter eggs, timeline glyphs —
+       parked under reduced motion, even when it flips mid-session */
+    if (!calm) this.extras?.frame(dt, audio || {}, this, y);
 
     this.renderer.render(this.scene, this.camera);
   }

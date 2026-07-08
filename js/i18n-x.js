@@ -17,6 +17,8 @@ export const X = {
       atelierT1: 'The hand', atelierT2: 'atelier',
       atelierLead: 'A canvas that listens to both hands at once. In space you paint starlight; underwater, bioluminescent ink. What you make is yours — export it.',
       deckSerif: 'The descent ends where play begins.',
+      beat1: 'Hold your breath. The pressure is only the sea, asking if you mean it.',
+      contactSign: 'This is the floor of my sea.',
     },
     ui: {
       rail: ['Signal', 'Descent', 'Payload', 'Systems', 'Arcade', 'Atelier', 'Moon', 'Contact'],
@@ -75,6 +77,8 @@ export const X = {
       atelierT1: 'L’atelier', atelierT2: 'delle mani',
       atelierLead: 'Una tela che ascolta due mani insieme. Nello spazio dipingi luce di stelle; sott’acqua, inchiostro bioluminescente. Ciò che crei è tuo — esportalo.',
       deckSerif: 'La discesa finisce dove comincia il gioco.',
+      beat1: 'Trattieni il fiato. La pressione è solo il mare che chiede se fai sul serio.',
+      contactSign: 'Questo è il fondo del mio mare.',
     },
     ui: {
       rail: ['Segnale', 'Discesa', 'Carico', 'Sistemi', 'Sala giochi', 'Atelier', 'Luna', 'Contatto'],
@@ -133,6 +137,8 @@ export const X = {
       atelierT1: 'El atelier', atelierT2: 'de las manos',
       atelierLead: 'Un lienzo que escucha las dos manos a la vez. En el espacio pintas luz de estrellas; bajo el agua, tinta bioluminiscente. Lo que creas es tuyo — expórtalo.',
       deckSerif: 'El descenso termina donde empieza el juego.',
+      beat1: 'Aguanta la respiración. La presión es solo el mar preguntando si vas en serio.',
+      contactSign: 'Este es el fondo de mi mar.',
     },
     ui: {
       rail: ['Señal', 'Descenso', 'Carga', 'Sistemas', 'Recreativa', 'Atelier', 'Luna', 'Contacto'],
@@ -191,6 +197,8 @@ export const X = {
       atelierT1: 'Das Atelier', atelierT2: 'der Hände',
       atelierLead: 'Eine Leinwand, die auf beide Hände zugleich hört. Im All malst du Sternenlicht; unter Wasser biolumineszente Tinte. Was du schaffst, gehört dir — exportiere es.',
       deckSerif: 'Der Abstieg endet, wo das Spiel beginnt.',
+      beat1: 'Halt den Atem an. Der Druck ist nur das Meer, das fragt, ob du es ernst meinst.',
+      contactSign: 'Das ist der Grund meines Meeres.',
     },
     ui: {
       rail: ['Signal', 'Abstieg', 'Fracht', 'Systeme', 'Arcade', 'Atelier', 'Mond', 'Kontakt'],
@@ -249,6 +257,8 @@ export const X = {
       atelierT1: 'O ateliê', atelierT2: 'das mãos',
       atelierLead: 'Uma tela que escuta as duas mãos ao mesmo tempo. No espaço pintas luz de estrelas; debaixo de água, tinta bioluminescente. O que crias é teu — exporta-o.',
       deckSerif: 'A descida termina onde o jogo começa.',
+      beat1: 'Sustém a respiração. A pressão é só o mar a perguntar se estás a falar a sério.',
+      contactSign: 'Este é o fundo do meu mar.',
     },
     ui: {
       rail: ['Sinal', 'Descida', 'Carga', 'Sistemas', 'Arcada', 'Ateliê', 'Lua', 'Contacto'],
@@ -307,6 +317,8 @@ export const X = {
       atelierT1: 'L’atelier', atelierT2: 'des mains',
       atelierLead: 'Une toile qui écoute les deux mains à la fois. Dans l’espace tu peins de la lumière d’étoiles ; sous l’eau, de l’encre bioluminescente. Ce que tu crées t’appartient — exporte-le.',
       deckSerif: 'La descente finit là où le jeu commence.',
+      beat1: 'Retiens ton souffle. La pression, c’est la mer qui demande si tu es sérieux.',
+      contactSign: 'C’est le fond de ma mer.',
     },
     ui: {
       rail: ['Signal', 'Descente', 'Charge', 'Systèmes', 'Arcade', 'Atelier', 'Lune', 'Contact'],

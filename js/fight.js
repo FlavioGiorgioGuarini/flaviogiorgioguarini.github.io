@@ -362,11 +362,15 @@ export function createFight(themeOf) {
   $('#fl-close').addEventListener('click', () => close());
   $('#fl-msg-btn').addEventListener('click', reset);
 
+  let prevFocus = null;
   function openLayer() {
     $('#fl-name').textContent = t('ui.fightName');
     $('#fl-hint').textContent = t('fight.hint');
     layer.hidden = false;
     open = true;
+    prevFocus = document.activeElement;
+    document.querySelectorAll('header, main, .gauge, .bot, .skip-link, #guide').forEach((el) => { el.inert = true; });
+    $('#fl-close').focus();
     last = performance.now();
     reset();
     raf = requestAnimationFrame(loop);
@@ -376,6 +380,8 @@ export function createFight(themeOf) {
     layer.hidden = true;
     open = false;
     cancelAnimationFrame(raf);
+    document.querySelectorAll('header, main, .gauge, .bot, .skip-link, #guide').forEach((el) => { el.inert = false; });
+    prevFocus?.focus();
     return true;
   }
 

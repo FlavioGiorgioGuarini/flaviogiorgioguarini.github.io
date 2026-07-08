@@ -166,6 +166,16 @@ export async function startVision({ onHands, onFace, onStatus, face = false, max
   let raf = 0, lastTs = -1, stopped = false, tickN = 0, anyLive = false;
   const emitList = [];
 
+  /* drive detection once per NEW camera frame, not per display refresh:
+     rVFC fires on decoded frames (~30fps); the rAF fallback skips ticks
+     where currentTime hasn't advanced. Keeps 120Hz displays from running
+     4x inference against a 30fps webcam. */
+  const hasRVFC = typeof video.requestVideoFrameCallback === 'function';
+  let lastMediaTime = -1;
+  const schedule = () => {
+    raf = hasRVFC ? video.requestVideoFrameCallback(tick) : requestAnimationFrame(tick);
+  };
+
   /* one detection → one track update (the v7 single-hand pipeline, per slot) */
   function feedTrack(tr, lm, world, tSec) {
     tr.lost = 0;
@@ -262,8 +272,12 @@ export async function startVision({ onHands, onFace, onStatus, face = false, max
 
   function tick() {
     if (stopped) return;
-    raf = requestAnimationFrame(tick);
+    schedule();
     if (video.readyState < 2) return;
+    if (!hasRVFC) {
+      if (video.currentTime === lastMediaTime) return;
+      lastMediaTime = video.currentTime;
+    }
     const ts = performance.now();
     if (ts === lastTs) return;
     lastTs = ts;
@@ -329,7 +343,8 @@ export async function startVision({ onHands, onFace, onStatus, face = false, max
     setMaxHands(n) { cap = Math.max(1, Math.min(2, n)); },
     stop() {
       stopped = true;
-      cancelAnimationFrame(raf);
+      if (hasRVFC) video.cancelVideoFrameCallback(raf);
+      else cancelAnimationFrame(raf);
       stream.getTracks().forEach((t) => t.stop());
       hands.close();
       faceModel?.close();

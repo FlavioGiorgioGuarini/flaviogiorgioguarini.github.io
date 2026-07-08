@@ -228,6 +228,12 @@ export function startBot({ canvas }) {
     if (open) input.focus();
   }
 
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || panel.hidden) return;
+    togglePanel();
+    toggle.focus();
+  });
+
   /* ---------- per-frame animation, driven by the main loop ---------- */
   function frame(dt, musicLevel = 0, mix = 0) {
     bt += dt;

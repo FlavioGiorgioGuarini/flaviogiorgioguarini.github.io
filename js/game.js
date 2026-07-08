@@ -61,9 +61,13 @@ export function startGame(canvas) {
   };
   addEventListener('keydown', (e) => {
     if (!inView() || e.target.matches('input, textarea')) return;
+    /* arrows steer the pilot only when the cabinet has focus — a visitor
+       scrolling past with the keyboard keeps their arrow keys */
+    if (e.code.startsWith('Arrow') && document.activeElement !== canvas) return;
     const d = KEYMAP[e.code];
     if (d) { keys.add(d); if (e.code.startsWith('Arrow')) e.preventDefault(); }
   });
+  canvas.addEventListener('pointerdown', () => canvas.focus());
   addEventListener('keyup', (e) => { const d = KEYMAP[e.code]; if (d) keys.delete(d); });
 
   /* touch d-pad */

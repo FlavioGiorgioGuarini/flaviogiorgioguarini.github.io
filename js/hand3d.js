@@ -152,8 +152,10 @@ class OneHand {
     this.tracked = false;
     this.presence = 0;        // eased 0..1 materialization
     this.presTarget = 0;
+    this.idleShrink = 1;      // compact idle: smaller + tucked on narrow frames
     this._tmp = new THREE.Vector3();
     this._tmp2 = new THREE.Vector3();
+    this._tmp3 = new THREE.Vector3();
     this._up = new THREE.Vector3(0, 1, 0);
     this._z = new THREE.Vector3(0, 0, 1);
     this._ax = new THREE.Vector3(1, 0, 0);
@@ -182,10 +184,13 @@ class OneHand {
     }
   }
 
-  setIdle(t, px, py) {
+  setIdle(t, px, py, compact = 0) {
     this.tracked = false;
     this.presTarget = 1;
-    this._screenAnchor(0.74 + px * 0.015, 0.86 + py * 0.012, this.anchorTarget);
+    /* compact 0..1: portrait frames and the sea floor tuck the hand into
+       the corner and shrink it so it never blankets copy or CTAs */
+    this.idleShrink = 1 - compact * 0.42;
+    this._screenAnchor(0.74 + compact * 0.15 + px * 0.015, 0.86 + compact * 0.09 + py * 0.012, this.anchorTarget);
     const breathe = Math.sin(t * 0.9) * 0.15;
     const tiltZ = 0.42 + Math.sin(t * 0.23) * 0.05 + px * 0.12;
     const tiltX = -0.34 + py * 0.14;
@@ -204,8 +209,8 @@ class OneHand {
     const vis = this.presence > 0.015;
     this.group.visible = vis;
     if (!vis) return;
-    const s = 0.25 + this.presence * 0.75;   // materialize: grow into place
-    this.group.scale.setScalar(s);
+    const s = (0.25 + this.presence * 0.75) * (this.tracked ? 1 : this.idleShrink);
+    this.group.scale.setScalar(s);           // materialize: grow into place
 
     const k = this.tracked ? 0.45 : 0.06;
     this.anchor.lerp(this.anchorTarget, k);
@@ -229,7 +234,7 @@ class OneHand {
     this.palm.position.copy(w).add(i5).add(i9).add(i17).multiplyScalar(0.25);
     this._tmp.copy(i5).sub(w);
     const across = this._tmp2.copy(i17).sub(i5);
-    const normal = this._tmp.clone().cross(across).normalize();
+    const normal = this._tmp3.crossVectors(this._tmp, across).normalize();
     this.palm.quaternion.setFromUnitVectors(this._z, normal);
     const spanY = this._tmp.length();
     const spanX = across.length();
@@ -343,8 +348,8 @@ export class Hands3D {
   }
 
   /* no camera / no hands: the right hand keeps a cinematic idle */
-  setIdle(t, px, py) {
-    this.hand.R.setIdle(t, px, py);
+  setIdle(t, px, py, compact = 0) {
+    this.hand.R.setIdle(t, px, py, compact);
     this.hand.L.drop();
   }
 

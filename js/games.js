@@ -564,10 +564,14 @@ export function createRunner(themeOf) {
   cv.addEventListener('pointermove', (e) => { if (!dragging) return; const p = toGame(e); player.tx = p.x; player.ty = p.y; });
   cv.addEventListener('pointerup', () => { dragging = false; });
 
+  let prevFocus = null;
   function openLayer() {
     bakeAll();
     layer.hidden = false;
     open = true;
+    prevFocus = document.activeElement;
+    document.querySelectorAll('header, main, .gauge, .bot, .skip-link, #guide').forEach((el) => { el.inert = true; });
+    $('#gl-close').focus();
     last = performance.now();
     if (phase === 'ready' && lvlIdx === 0 && score === 0) {
       msg(t('game.lvlTag'), `${t('game.lvl')} 1`, t('game.lvlB'), t('game.go'));
@@ -580,6 +584,8 @@ export function createRunner(themeOf) {
     layer.hidden = true;
     open = false;
     cancelAnimationFrame(raf);
+    document.querySelectorAll('header, main, .gauge, .bot, .skip-link, #guide').forEach((el) => { el.inert = false; });
+    prevFocus?.focus();
     return true;
   }
 

@@ -9,7 +9,7 @@
 <link rel="canonical" href="https://flaviogiorgioguarini.github.io/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Flavio Giorgio Guarini — Into the Deep">
-<meta property="og:description" content="Security by discipline, sound by instinct. A portfolio you enter, hear, and steer with both hands.">
+<meta property="og:description" content="Security by discipline, sound by instinct. A portfolio you enter, hear, and steer with both hands — all the way down to −1233 m.">
 <meta property="og:url" content="https://flaviogiorgioguarini.github.io/">
 <meta property="og:image" content="https://flaviogiorgioguarini.github.io/assets/img/og-image.jpg">
 <meta name="twitter:card" content="summary_large_image">
@@ -17,21 +17,35 @@
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="preload" as="font" type="font/woff2" href="assets/fonts/syncopate-v24-latin-regular.woff2" crossorigin>
 <link rel="preload" as="font" type="font/woff2" href="assets/fonts/stix-two-text-v18-latin-500italic.woff2" crossorigin>
+<link rel="modulepreload" href="js/i18n.js">
+<link rel="modulepreload" href="js/i18n-x.js">
+<link rel="modulepreload" href="js/data.js">
+<link rel="modulepreload" href="js/audio.js">
+<link rel="modulepreload" href="js/quality.js">
+<link rel="modulepreload" href="js/sensors.js">
+<link rel="modulepreload" href="js/gestures.js">
+<link rel="modulepreload" href="js/scene.js">
+<link rel="modulepreload" href="vendor/three/three.module.min.js">
+<link rel="modulepreload" href="vendor/three/three.core.min.js">
 <link rel="stylesheet" href="css/style.css">
 <script type="module" src="js/app.js"></script>
 </head>
 <body>
 
-<a class="skip-link" href="#home" data-i18n="ui.skip">Skip to content</a>
+<a class="skip-link" href="#main" data-i18n="ui.skip">Skip to content</a>
 
 <canvas id="stage" aria-hidden="true"></canvas>
 
-<!-- Entry gate: doubles as the user gesture required for audio -->
-<div class="overlay" id="gate">
-  <div class="overlay__box panel">
+<!-- one polite voice for world-state changes (ocean, hands, immersive, quality) -->
+<p class="visually-hidden" id="announcer" aria-live="polite"></p>
+
+<!-- Entry gate: the opening frame of the film; doubles as the audio user-gesture -->
+<div class="overlay" id="gate" role="dialog" aria-modal="true" aria-labelledby="gate-name" aria-describedby="gate-note">
+  <div class="overlay__box">
     <p class="serif-line gate-sig" data-i18n="ui.gateSig">A signal from Bari, Italy</p>
-    <h2>Flavio Giorgio Guarini</h2>
-    <p class="small" data-i18n="ui.gateNote"></p>
+    <div class="gate-line" aria-hidden="true"></div>
+    <h2 id="gate-name">Flavio Giorgio Guarini</h2>
+    <p class="small" id="gate-note" data-i18n="ui.gateNote"></p>
     <div class="actions">
       <button class="btn btn--solid" id="enter-sound" data-i18n="ui.enterSound">Enter with sound</button>
       <button class="btn" id="enter-silent" data-i18n="ui.enterSilent">Enter in silence</button>
@@ -40,9 +54,9 @@
 </div>
 
 <!-- Camera consent, opened only from the camera toggle -->
-<div class="overlay" id="cam-consent" hidden>
+<div class="overlay" id="cam-consent" role="dialog" aria-modal="true" aria-labelledby="cam-title" hidden>
   <div class="overlay__box panel">
-    <h2 data-i18n="ui.camTitle">Hands as instruments</h2>
+    <h2 id="cam-title" data-i18n="ui.camTitle">Hands as instruments</h2>
     <p class="small" data-i18n="ui.camBody"></p>
     <div class="actions">
       <button class="btn btn--solid" id="cam-enable" data-i18n="ui.camEnable">Enable camera</button>
@@ -52,9 +66,9 @@
 </div>
 
 <!-- Middle-finger easter egg -->
-<div class="overlay" id="sarcasm" hidden>
+<div class="overlay" id="sarcasm" role="dialog" aria-modal="true" aria-labelledby="sarc-title" hidden>
   <div class="overlay__box panel">
-    <h2 data-i18n="ui.sarcTitle">Noted.</h2>
+    <h2 id="sarc-title" data-i18n="ui.sarcTitle">Noted.</h2>
     <p data-i18n="ui.sarcBody"></p>
     <div class="actions">
       <button class="btn btn--solid" id="sarcasm-close" data-i18n="ui.sarcClose">Fair enough</button>
@@ -91,23 +105,26 @@
   </div>
 </header>
 
-<nav aria-label="Sections">
+<!-- Depth gauge: navigation as instrument. The page bottoms out at −1233 m,
+     the South Adriatic Pit — the deepest point of Bari's own sea. -->
+<nav aria-label="Depth stations" class="gauge">
+  <span class="gauge__readout num" id="depth-readout" aria-hidden="true">0000 M</span>
   <ul class="rail" id="rail">
-    <li><a href="#home"><span class="lbl" data-i18n="ui.rail.0">Signal</span><span class="dot"></span></a></li>
-    <li><a href="#journey"><span class="lbl" data-i18n="ui.rail.1">Descent</span><span class="dot"></span></a></li>
-    <li><a href="#payload"><span class="lbl" data-i18n="ui.rail.2">Payload</span><span class="dot"></span></a></li>
-    <li><a href="#systems"><span class="lbl" data-i18n="ui.rail.3">Systems</span><span class="dot"></span></a></li>
-    <li><a href="#arcade"><span class="lbl" data-i18n="ui.rail.4">Arcade</span><span class="dot"></span></a></li>
-    <li><a href="#atelier"><span class="lbl" data-i18n="ui.rail.5">Atelier</span><span class="dot"></span></a></li>
-    <li><a href="#moon"><span class="lbl" data-i18n="ui.rail.6">Moon</span><span class="dot"></span></a></li>
-    <li><a href="#contact"><span class="lbl" data-i18n="ui.rail.7">Contact</span><span class="dot"></span></a></li>
+    <li><a href="#home" data-depth="0"><span class="lbl" data-i18n="ui.rail.0">Signal</span><span class="dot"></span></a></li>
+    <li><a href="#journey" data-depth="150"><span class="lbl" data-i18n="ui.rail.1">Descent</span><span class="dot"></span></a></li>
+    <li><a href="#payload" data-depth="400"><span class="lbl" data-i18n="ui.rail.2">Payload</span><span class="dot"></span></a></li>
+    <li><a href="#systems" data-depth="650"><span class="lbl" data-i18n="ui.rail.3">Systems</span><span class="dot"></span></a></li>
+    <li><a href="#arcade" data-depth="800"><span class="lbl" data-i18n="ui.rail.4">Arcade</span><span class="dot"></span></a></li>
+    <li><a href="#atelier" data-depth="950"><span class="lbl" data-i18n="ui.rail.5">Atelier</span><span class="dot"></span></a></li>
+    <li><a href="#moon" data-depth="1100"><span class="lbl" data-i18n="ui.rail.6">Moon</span><span class="dot"></span></a></li>
+    <li><a href="#contact" data-depth="1233"><span class="lbl" data-i18n="ui.rail.7">Contact</span><span class="dot"></span></a></li>
   </ul>
 </nav>
 
-<main id="main">
+<main id="main" tabindex="-1">
 
-  <!-- HERO -->
-  <section class="section" id="home" aria-label="Introduction">
+  <!-- HERO · 0 m -->
+  <section class="section section--stage" id="home" aria-label="Introduction">
     <div class="section__inner hero-grid">
       <div class="hero-copy">
         <p class="telemetry num" aria-hidden="true">41.12°N 16.87°E · BARI · T+<span id="tm-age">22</span>Y</p>
@@ -122,7 +139,7 @@
     </div>
   </section>
 
-  <!-- TRAJECTORY -->
+  <!-- DESCENT LOG · −150 m -->
   <section class="section" id="journey" aria-label="Trajectory">
     <div class="section__inner split split--top">
       <div class="sticky-head">
@@ -139,34 +156,39 @@
     </div>
   </section>
 
-  <!-- PAYLOAD -->
+  <!-- BEAT · the pressure check -->
+  <section class="section beat" aria-label="Interlude">
+    <p class="serif-line" data-i18n="sections.beat1"></p>
+  </section>
+
+  <!-- PAYLOAD · −400 m -->
   <section class="section" id="payload" aria-label="Projects">
     <div class="section__inner">
       <h2 class="display display--section"><span data-i18n="sections.payloadT1">Payload</span><br><span data-i18n="sections.payloadT2">manifest</span></h2>
       <p class="lead sub-lead" data-i18n="sections.payloadLead"></p>
-      <div class="grid-3" id="projects"><!-- rendered from i18n --></div>
+      <div class="cargo-list" id="projects"><!-- rendered from i18n --></div>
     </div>
   </section>
 
-  <!-- SYSTEMS -->
-  <section class="section" id="systems" aria-label="Skills">
-    <div class="section__inner split">
-      <div>
+  <!-- SYSTEMS · −650 m · the orbit leads, the copy follows -->
+  <section class="section section--stage" id="systems" aria-label="Skills">
+    <div class="section__inner split split--lead">
+      <div class="orbit-wrap">
+        <canvas id="orbit" role="img" aria-label="Orbital map of skills"></canvas>
+        <ul class="visually-hidden" id="orbit-fallback"></ul>
+      </div>
+      <div class="systems-copy">
         <h2 class="display display--section"><span data-i18n="sections.systemsT1">Systems</span><br><span data-i18n="sections.systemsT2">online</span></h2>
         <p class="serif-line sub-serif" data-i18n="sections.systemsSerif"></p>
         <p class="small sub-note" id="orbit-note" data-i18n="sections.systemsNote"></p>
         <p class="small orbit-detail num" id="orbit-detail" role="status"></p>
       </div>
-      <div class="orbit-wrap">
-        <canvas id="orbit" role="img" aria-label="Orbital map of skills"></canvas>
-        <ul class="visually-hidden" id="orbit-fallback"></ul>
-      </div>
     </div>
   </section>
 
-  <!-- ARCADE -->
+  <!-- ARCADE · −800 m -->
   <section class="section" id="arcade" aria-label="Mini game">
-    <div class="section__inner">
+    <div class="section__inner section__inner--wide">
       <h2 class="display display--section"><span data-i18n="sections.arcadeT1">Past lives</span><br><span data-i18n="sections.arcadeT2">arcade</span></h2>
       <p class="lead sub-lead" data-i18n="sections.arcadeLead"></p>
       <div class="game-frame">
@@ -174,7 +196,7 @@
       </div>
       <div class="game-hud">
         <p class="small" id="game-status" data-i18n="ui.gameStatus"></p>
-        <div class="dpad" id="dpad" aria-hidden="true">
+        <div class="dpad" id="dpad">
           <button data-d="up" aria-label="Up">▲</button>
           <button data-d="left" aria-label="Left">◀</button>
           <button data-d="down" aria-label="Down">▼</button>
@@ -189,9 +211,9 @@
     </div>
   </section>
 
-  <!-- ATELIER -->
+  <!-- ATELIER · −950 m -->
   <section class="section" id="atelier" aria-label="Hand atelier">
-    <div class="section__inner">
+    <div class="section__inner section__inner--wide">
       <h2 class="display display--section"><span data-i18n="sections.atelierT1">The hand</span><br><span data-i18n="sections.atelierT2">atelier</span></h2>
       <p class="lead sub-lead" data-i18n="sections.atelierLead"></p>
       <div class="art-frame">
@@ -207,17 +229,17 @@
     </div>
   </section>
 
-  <!-- MOON -->
-  <section class="section" id="moon" aria-label="CTF challenge">
-    <div class="section__inner split">
-      <div>
+  <!-- MOON · −1100 m · looking back up through the water -->
+  <section class="section section--stage" id="moon" aria-label="CTF challenge">
+    <div class="section__inner">
+      <div class="moon-inner">
         <h2 class="display display--section"><span data-i18n="sections.moonT1">The moon</span><br><span data-i18n="sections.moonT2">keeps a date</span></h2>
         <p class="serif-line sub-serif" data-i18n="sections.moonSerif"></p>
         <p class="lead sub-lead" data-i18n="sections.moonLead"></p>
         <form id="ctf-form" autocomplete="off" novalidate>
           <label class="field"><span data-i18n="ctf.label">DD/MM/YYYY</span>
-            <input type="text" id="ctf-answer" name="answer" inputmode="numeric" maxlength="10" placeholder="··/··/····" required>
-            <em class="err" id="ctf-err"></em>
+            <input type="text" id="ctf-answer" name="answer" inputmode="numeric" maxlength="10" placeholder="··/··/····" aria-describedby="ctf-err" required>
+            <em class="err" id="ctf-err" role="alert"></em>
           </label>
           <button class="btn btn--solid" type="submit" data-i18n="ctf.btn">Transmit answer</button>
         </form>
@@ -237,15 +259,15 @@
           <h3 data-i18n="ctf.doneTitle"></h3>
           <p data-i18n="ctf.doneBody"></p>
         </div>
-      </div>
-      <div class="moon-hint">
-        <p class="small num" id="moon-telemetry" aria-hidden="true" data-i18n="ui.handOff"></p>
+        <div class="moon-hint">
+          <p class="small num" id="moon-telemetry" aria-hidden="true" data-i18n="ui.handOff"></p>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- CONTACT -->
-  <section class="section" id="contact" aria-label="Contact">
+  <!-- CONTACT · −1233 m · the floor of the sea -->
+  <section class="section section--stage" id="contact" aria-label="Contact">
     <div class="section__inner contact-inner">
       <p class="serif-line" data-i18n="sections.contactSerif"></p>
       <h2 class="display display--section contact-title"><span data-i18n="sections.contactT1">Open a</span><br><span data-i18n="sections.contactT2">channel</span></h2>
@@ -266,6 +288,10 @@
           <button class="btn btn--solid" id="play-runner"><span data-i18n="ui.play">Play</span> · <span data-i18n="ui.playName">Deep Runner</span></button>
           <button class="btn" id="play-fight"><span data-i18n="ui.fightVerb">Fight</span> · <span data-i18n="ui.fightName">You vs the Larpers</span></button>
         </div>
+      </div>
+      <div class="signoff">
+        <p class="serif-line" data-i18n="sections.contactSign"></p>
+        <span class="num">41.12°N 16.87°E · SOUTH ADRIATIC PIT · −1233 M</span>
       </div>
       <p class="small foot-note"><span data-i18n="sections.footNote"></span> © <span id="yr">2026</span> Flavio Giorgio Guarini.</p>
     </div>
