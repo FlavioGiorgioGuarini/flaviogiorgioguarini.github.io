@@ -133,7 +133,8 @@ export async function startVision({ onHands, onFace, onStatus, face = false, max
       hands = await HandLandmarker.createFromOptions(fileset, {
         baseOptions: { modelAssetPath: 'vendor/mediapipe/hand_landmarker.task', delegate },
         runningMode: 'VIDEO',
-        numHands: 2,
+        /* one-hand devices pay for one hand of inference, not two */
+        numHands: Math.max(1, Math.min(2, maxHands)),
       });
       break;
     } catch { onStatus?.('retry'); }

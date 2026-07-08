@@ -27,10 +27,14 @@ export function detectQuality() {
   const tier = score >= 4 ? 2 : score >= 2 ? 1 : 0;
   return {
     tier,
+    coarse,                   // touch-first device: one-hand grammar everywhere
     stars: [2800, 5600, 9000][tier],
     dust: tier > 0,
     face: tier > 0,           // Matrix face backdrop needs headroom
-    hands: tier > 0 ? 2 : 1,  // dual-hand first; weakest devices track one
+    /* one-hand-first: on phones/tablets a single hand IS the instrument —
+       tap, glide, draw. Two hands holding a phone means zero on the screen;
+       desktop keeps the dual-hand grammar. */
+    hands: coarse || tier === 0 ? 1 : 2,
     koi: [3, 5, 7][tier],
     dprCap: [1.25, 1.5, 1.75][tier],
     waterSeg: [40, 56, 72][tier],

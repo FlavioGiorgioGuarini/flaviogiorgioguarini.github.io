@@ -47,6 +47,21 @@ const guess = (navigator.language || 'en').slice(0, 2).toLowerCase();
 setLang(saved || (LOCALES.includes(guess) ? guess : 'en'));
 langSel.value = lang;
 
+/* authored waypoint depths across the journey band (−150 → −400) */
+const TL_DEPTHS = [150, 180, 215, 250, 285, 320, 360, 400];
+/* each stage lights when the dive reaches it; entrance choreography is
+   per-stage in CSS, so the biography plays as a sequence, not a wall */
+let tlio = null;
+function litObserve() {
+  tlio?.disconnect();
+  tlio = new IntersectionObserver((es) => es.forEach((en) => {
+    if (!en.isIntersecting) return;
+    en.target.classList.add('lit');
+    tlio.unobserve(en.target);
+  }), { threshold: 0.3 });
+  document.querySelectorAll('.tl-item').forEach((el) => tlio.observe(el));
+}
+
 function renderContent() {
   const L = I18N[lang] ?? I18N.en;
   document.documentElement.lang = lang;
@@ -63,12 +78,17 @@ function renderContent() {
   $('#stats').innerHTML = STAT_NUMS.map((n, i) => `
     <div class="stat"><span class="num">${n}</span><span class="lbl">${L.sections.stats[i]}</span></div>`).join('');
 
-  $('#timeline').innerHTML = L.timeline.map((x) => `
-    <div class="tl-item">
+  /* descent log: each life stage is its own scene — the index picks the
+     stage dialect (marker, entrance, light — css .tl-stage-N), the depth
+     mark keeps the log on the same instrument as the gauge */
+  $('#timeline').innerHTML = L.timeline.map((x, i) => `
+    <div class="tl-item tl-stage-${i}">
+      <span class="tl-depth num" aria-hidden="true">−${String(TL_DEPTHS[i] ?? 150).padStart(3, '0')} M</span>
       <span class="yr num">${x.year}</span>
       <h3>${x.title} · <span class="tl-place">${x.place}</span></h3>
       <p>${x.text}</p>
     </div>`).join('');
+  litObserve();
 
   /* cargo manifest: three full-width rows, each its own object.
      Hold 02 ships sealed — the hatching says everything it may. */
@@ -131,6 +151,32 @@ const INERT_SEL = 'header, main, .gauge, .bot, .skip-link, #guide';
 const setModal = (on) => document.querySelectorAll(INERT_SEL).forEach((el) => { el.inert = on; });
 setModal(true);
 $('#enter-sound')?.focus();
+
+/* luxury CLI: the gate boots like an instrument coming online. Telemetry
+   voice (EN mono, aria-hidden) — same register as the hero coordinates. */
+const bootEl = $('#gate-boot');
+if (bootEl) {
+  const bootLines = [
+    'DEPTH LINK ......... OK',
+    'DNS_1 SCORE ........ ARMED',
+    `TRACKING ........... ${Q.coarse ? 'ONE-HAND' : 'DUAL-HAND'}`,
+    'PRESSURE ........... EQUALIZED',
+  ];
+  if (reduced) {
+    bootEl.textContent = bootLines.join('\n');
+    bootEl.classList.add('done');
+  } else {
+    let li = 0, ci = 0, out = '';
+    const tk = setInterval(() => {
+      if (gate.hidden) { clearInterval(tk); return; }
+      const ln = bootLines[li];
+      if (!ln) { clearInterval(tk); bootEl.classList.add('done'); return; }
+      ci += 3;
+      if (ci >= ln.length) { out += ln + '\n'; li++; ci = 0; bootEl.textContent = out; }
+      else bootEl.textContent = out + ln.slice(0, ci);
+    }, 20);
+  }
+}
 
 /* single shared boot for CAERUS: idle prefetch and toggle click can race */
 let botP = null;
@@ -203,18 +249,29 @@ addEventListener('pointermove', (e) => {
 /* ---------- camera consent + dual-hand tracking ---------- */
 const camCtl = $('#ctl-cam');
 const consent = $('#cam-consent');
-const VIS_MSG = { req: 'ui.visReq', retry: 'ui.visRetry', ready: 'ui.visReady' };
+const VIS_MSG = { req: 'ui.visReq', retry: 'ui.visRetry', ready: Q.hands === 1 ? 'ui.visReady1' : 'ui.visReady' };
+
+/* one-hand-first: touch devices read the single-hand grammar everywhere */
+if (Q.coarse) {
+  document.querySelector('#cam-consent [data-i18n="ui.camBody"]')?.setAttribute('data-i18n', 'ui.camBody1');
+  document.querySelector('#art-status')?.setAttribute('data-i18n', 'ui.artHint1');
+}
+
+function stopVision(msgKey = 'ui.handOff') {
+  state.vision?.stop();
+  state.vision = null;
+  state.handsLive = 0;
+  state.dwell?.hide();
+  state.faceField?.setFace(null);
+  camCtl.setAttribute('aria-pressed', 'false');
+  $('#moon-telemetry').textContent = t('ui.handOff');
+  $('#game-status').textContent = t(msgKey);
+  announce(t(msgKey));
+}
 
 camCtl.addEventListener('click', () => {
   if (state.vision) {
-    state.vision.stop();
-    state.vision = null;
-    state.handsLive = 0;
-    state.dwell?.hide();
-    state.faceField?.setFace(null);
-    camCtl.setAttribute('aria-pressed', 'false');
-    $('#moon-telemetry').textContent = t('ui.handOff');
-    announce(t('ui.handOff'));
+    stopVision();
     return;
   }
   consent.hidden = false;
@@ -267,6 +324,7 @@ sarcasm.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSarcas
 function closeFrontmost() {
   if (state.games?.close?.()) return;
   if (state.fight?.close?.()) return;
+  if (state.art?.closeFull?.()) return;
   if (window.__guide?.close?.()) return;
   const botPanel = $('#bot-panel');
   if (botPanel && !botPanel.hidden) { state.bot?.togglePanel(); return; }
@@ -304,7 +362,25 @@ const gest = createGestures({
   },
 });
 
+/* stability watchdog (one-hand mobile): tracking that keeps dropping is
+   worse than no tracking — after 4 losses in 30 s the page hands the
+   controls straight back to touch, immediately and audibly */
+let dropLog = [];
+let prevLive = 0;
 function onHands(hands, now) {
+  if (Q.coarse && state.vision) {
+    if (!hands.length && prevLive > 0) {
+      dropLog.push(now);
+      dropLog = dropLog.filter((t0) => now - t0 < 30000);
+      if (dropLog.length >= 4) {
+        dropLog = [];
+        prevLive = 0;
+        stopVision('ui.visUnstable');
+        return;
+      }
+    }
+    prevLive = hands.length;
+  }
   state.handsLive = hands.length;
   state.hand?.setHands(hands);
   gest.feed(hands, now);
@@ -572,6 +648,9 @@ if (matchMedia('(pointer: fine)').matches && !reduced) {
       const r = b.getBoundingClientRect();
       b.style.transition = 'none';
       b.style.transform = `translate(${((e.clientX - r.left - r.width / 2) * 0.12).toFixed(1)}px, ${((e.clientY - r.top - r.height / 2) * 0.2).toFixed(1)}px)`;
+      /* the liquid highlight tracks the pointer through the glass */
+      b.style.setProperty('--mx', `${((e.clientX - r.left) / r.width * 100).toFixed(1)}%`);
+      b.style.setProperty('--my', `${((e.clientY - r.top) / r.height * 100).toFixed(1)}%`);
     });
     b.addEventListener('pointerleave', () => { b.style.transition = ''; b.style.transform = ''; });
   });

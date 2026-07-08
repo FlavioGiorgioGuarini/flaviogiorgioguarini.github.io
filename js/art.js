@@ -12,7 +12,8 @@ const STREAMERS = 12;         // swarm filaments per brush
 const ORBS = 4;
 
 const PALETTE = {
-  space: ['#59e8d5', '#e9ecea', '#f2c14e', '#9cfff1', '#5a6f9a'],
+  /* silver replaces the old gold: warm accents stay retired (v6 mandate) */
+  space: ['#59e8d5', '#e9ecea', '#c9d4d2', '#9cfff1', '#5a6f9a'],
   ocean: ['#7df0e2', '#4aa8c9', '#e8f6f4', '#6f5a9a', '#2f8f8a'],
 };
 
@@ -25,7 +26,10 @@ export function startArt(canvas) {
 
   function size() {
     const w = canvas.clientWidth || 800;
-    const h = Math.round(w * 0.625);
+    /* inline: fixed 16:10; takeover: the stage decides both dimensions */
+    const h = canvas.closest('.layer')
+      ? (canvas.clientHeight || Math.round(w * 0.625))
+      : Math.round(w * 0.625);
     if (w === W && h === H) return;
     // keep the artwork through resizes
     const keep = document.createElement('canvas');
@@ -97,7 +101,9 @@ export function startArt(canvas) {
     return { x: (e.clientX - r.left) * (W / r.width), y: (e.clientY - r.top) * (H / r.height) };
   };
   canvas.addEventListener('pointerdown', (e) => {
-    canvas.setPointerCapture(e.pointerId);
+    /* capture can throw for synthetic/AT-dispatched pointers — the stroke
+       must survive either way */
+    try { canvas.setPointerCapture(e.pointerId); } catch { /* draw uncaptured */ }
     const p = toLocal(e);
     moveBrush(`p${e.pointerId}`, p.x, p.y, true);
     tryGrab(`p${e.pointerId}`, p.x, p.y);
@@ -260,8 +266,57 @@ export function startArt(canvas) {
   });
   document.getElementById('art-reset').addEventListener('click', () => {
     pg.clearRect(0, 0, W, H);
-    document.getElementById('art-status').textContent = t('ui.artHint');
+    document.getElementById('art-status').textContent =
+      t(matchMedia('(pointer: coarse)').matches ? 'ui.artHint1' : 'ui.artHint');
   });
 
-  return { setHands };
+  /* ---------- one-hand takeover: the canvas becomes the whole frame ----------
+     iPhone Safari has no element-fullscreen API, so this is a real
+     body-level layer (same pattern + inert perimeter as the arcade
+     cabinets). The canvas NODE moves — context and artwork move with it. */
+  const INERT = 'header, main, .gauge, .bot, .skip-link, #guide';
+  const frame = canvas.closest('.art-frame');
+  const actions = document.querySelector('.art-actions');
+  const hud = actions?.parentElement;
+  let layer = null, prevFocus = null;
+
+  function onFullKey(e) { if (e.key === 'Escape') closeFull(); }
+
+  function openFull() {
+    if (layer) return;
+    prevFocus = document.activeElement;
+    layer = document.createElement('div');
+    layer.className = 'layer layer--art';
+    layer.innerHTML = `
+      <div class="layer__bar">
+        <p class="tag tag--teal">${t('sections.atelierT1')} ${t('sections.atelierT2')}</p>
+        <button class="ctl layer-close" aria-label="${t('ui.artExit')}">✕</button>
+      </div>
+      <div class="layer__stage layer__stage--art"></div>`;
+    document.body.appendChild(layer);
+    layer.querySelector('.layer__stage').appendChild(canvas);
+    if (actions) layer.querySelector('.layer__bar').insertBefore(actions, layer.querySelector('.layer-close'));
+    document.querySelectorAll(INERT).forEach((el) => { el.inert = true; });
+    addEventListener('keydown', onFullKey);
+    layer.querySelector('.layer-close').addEventListener('click', closeFull);
+    layer.querySelector('.layer-close').focus();
+    size();
+  }
+
+  function closeFull() {
+    if (!layer) return false;
+    frame.appendChild(canvas);
+    if (actions && hud) hud.appendChild(actions);
+    document.querySelectorAll(INERT).forEach((el) => { el.inert = false; });
+    removeEventListener('keydown', onFullKey);
+    layer.remove();
+    layer = null;
+    size();
+    prevFocus?.focus?.();
+    return true;
+  }
+
+  document.getElementById('art-full')?.addEventListener('click', openFull);
+
+  return { setHands, closeFull };
 }

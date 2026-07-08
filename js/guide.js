@@ -7,6 +7,8 @@
 import { t } from './i18n.js';
 
 const STEPS = 4;
+/* touch devices learn the one-hand grammar; desktop keeps the pair */
+const K = matchMedia('(pointer: coarse)').matches ? 'ui.guideM' : 'ui.guide';
 
 export function startGuide() {
   if (window.__guide) window.__guide.close();
@@ -35,9 +37,9 @@ export function startGuide() {
   let step = 0, closed = false;
 
   function render() {
-    $('#guide-tag').textContent = t('ui.guide.tag');
-    $('#guide-title').textContent = t(`ui.guide.s${step + 1}t`);
-    $('#guide-body').textContent = t(`ui.guide.s${step + 1}b`);
+    $('#guide-tag').textContent = t(`${K}.tag`);
+    $('#guide-title').textContent = t(`${K}.s${step + 1}t`);
+    $('#guide-body').textContent = t(`${K}.s${step + 1}b`);
     $('#guide-skip').textContent = t('ui.guide.skip');
     $('#guide-next').textContent = t(step === STEPS - 1 ? 'ui.guide.done' : 'ui.guide.next');
     $('#guide-dots').innerHTML = Array.from({ length: STEPS },

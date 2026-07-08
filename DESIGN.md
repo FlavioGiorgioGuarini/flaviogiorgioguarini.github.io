@@ -1,3 +1,28 @@
+# DESIGN — v10 "One Hand / Liquid Glass" (delta over v9 "The Dive Line")
+
+## v10 deltas
+- **One-hand-first on touch.** `pointer: coarse` ⇒ MediaPipe runs `numHands: 1`; the whole grammar
+  fits one hand: point+dwell = click, fist = glide/jump, pinch = paint, shaka = dive. Bimanual verbs
+  (bi-pinch portal, palm spread) are desktop-only. A stability watchdog (4 track losses / 30 s) hands
+  control back to touch immediately and says so. Guide + consent copy have one-hand variants
+  (`ui.guideM`, `ui.camBody1`) in all six languages.
+- **Liquid glass, instruments only.** Glass (backdrop blur+saturate, inner specular edge) is the material
+  of the CONTROL chrome: capsule, coach chip, CAERUS, layer bars, d-pad, ghost buttons. Content panels
+  keep the bezel language. `@supports` gate — the solid surfaces beneath stand alone. Solid buttons are
+  liquid metal: the teal fill is identity and never dims; sheen + pointer-tracked specular (`--mx/--my`)
+  ride on top. The old gold atelier orb is silver now (warm stays retired).
+- **Gate boot log.** The entry gate types a four-line instrument boot (mono, aria-hidden, EN telemetry
+  voice); reduced motion renders it instantly. Reports ONE-HAND / DUAL-HAND honestly.
+- **Descent log dialects.** Each journey stage owns marker + entrance + light (css `.tl-stage-N`, lit by
+  IntersectionObserver): origin dot fade · Gran Canaria surfacing blur · sound equalizer · diploma
+  staggered shutters (clip on CHILDREN — clip-path on the observed item caps its IO ratio) · Rome
+  desaturated, year never takes the accent · security chevron + brackets + one scan pass · dual-degree
+  double line, two-phase copy · 2027 hollow beacon. Depth marks per waypoint (−150…−400 M).
+- **Atelier takeover.** Fullscreen = body-level `.layer` (iPhone Safari has no element fullscreen);
+  the canvas node MOVES so the artwork survives; inert perimeter as in the arcade layers; Esc/✕/middle
+  close it. One finger draws inline and fullscreen; `setPointerCapture` is try/caught (synthetic/AT
+  pointers must never kill a stroke).
+
 # DESIGN — v9 "The Dive Line"
 
 Register: brand/portfolio — the design IS the product. Voice (physical words): **submerged · instrumental · inevitable**.

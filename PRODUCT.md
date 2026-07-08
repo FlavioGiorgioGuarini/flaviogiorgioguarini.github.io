@@ -1,7 +1,7 @@
 # Flavio Giorgio Guarini — Interstellar-grade Portfolio
 
 ## What it is
-Personal portfolio at https://flaviogiorgioguarini.github.io/ — a single-page cinematic experience. The visitor doesn't browse a résumé; they enter Flavio's deep: his own soundtrack (DNS_1, composed by him), a world that flips between space and ocean, and interactions built dual-hand first — both hands tracked and mirrored as two bionic hands with distinct roles (dominant = precision, other = motion).
+Personal portfolio at https://flaviogiorgioguarini.github.io/ — a single-page cinematic experience. The visitor doesn't browse a résumé; they enter Flavio's deep: his own soundtrack (DNS_1, composed by him), a world that flips between space and ocean, and interactions built hand-first. On desktop both hands are tracked and mirrored as two bionic hands with distinct roles (dominant = precision, other = motion). On phones and tablets the grammar is strictly ONE-hand (v10): a single hand points to click, closes to glide, pinches to paint — and if tracking wavers, control returns to touch instantly. Touch, pointer and keyboard always drive everything at full parity.
 
 ## Who it's for
 Recruiters, security/AI teams, collaborators, clients. They should leave thinking: "working with him means going beyond — response and evolution."
@@ -25,7 +25,7 @@ Kicker: **SECURITY · SOUND · SYSTEMS**. 22, Bari, Italy. Two bachelor's degree
 3. **Projects** — exactly 3: SIEM 3D v2.0 (flagship), Second Brain AI (teaser only, "Coming soon", zero detail), Sound (Ableton beta testing + this very soundtrack).
 4. **Skills** — data-driven orbital visualization, no icon soup.
 5. **Past Lives Arcade** — 8-bit map of his past, modern shader layer on top.
-6. **Hand Atelier** — two-brush light painting (pinch either hand), grabbable orbs with momentum, Save-as-JPG + Reset.
+6. **Hand Atelier** — light painting: two brushes on desktop (pinch either hand), one finger or one pinch on mobile, with a fullscreen takeover for drawing/signing; grabbable orbs with momentum, Save-as-JPG + Reset.
 7. **CTF Moon** — 3D moon, riddle, reward: a coffee with Flavio.
 8. **Contact + Game Deck** — email + WhatsApp, then two cabinets: DEEP RUNNER (10 levels, space/abyss skins, bosses at 5 and 10) and YOU vs THE LARPERS (scripted 1-HP overwhelm, Flavio's rescue, THE DEPTH BREAK).
 Persistent: CAERUS companion (slab monolith in space, jellyfish underwater), voice chat, corner canvas, first-visit two-hand guide (? replays it).
